@@ -6,7 +6,7 @@ USB_LIB=-lusb-1.0
 
 GCC=g++
 
-ARM=../../../buildroot/output/host/usr/bin/arm-linux-gcc
+ARM=../../../../buildroot/output/host/usr/bin/arm-linux-gcc
 
 all: testDing
 
