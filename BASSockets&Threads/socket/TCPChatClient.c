@@ -12,7 +12,7 @@
 int main (int argc, char *argv[])
 {
     int         sock;                   /* Socket descriptor */
-    char *      userInput;             /* String to send to echo server */
+    char        userInput[RCVBUFSIZE];   /* String to send to echo server */
     char        messageBuffer[RCVBUFSIZE]; /* Buffer for received string */
     int         userInputLen;          /* Length of string to echo */
     int         bytesRcvd;              /* Bytes read in single recv() */
@@ -35,7 +35,7 @@ int main (int argc, char *argv[])
                 break;
             }
 
-            userInputLen = strlen (userInput);          /* Determine input length */
+            userInputLen = strlen (userInput); /* Determine input length */
 
             if (send(sock, userInput, userInputLen, 0) < 0)
             {
@@ -51,9 +51,16 @@ int main (int argc, char *argv[])
                 messageBuffer[f] = '\0';
             }
 
-            if (recv(sock, messageBuffer, RCVBUFSIZE, 0) < 0)
+            bytesRcvd = recv(sock, messageBuffer, RCVBUFSIZE, 0);
+
+            if (bytesRcvd < 0)
             {
                 printf("Receive failed.\n");
+            }
+            else if (bytesRcvd == 0)
+            {
+                printf("Connection terminated by server.\n");
+                break;
             }
             else
             {
