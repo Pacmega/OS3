@@ -12,11 +12,10 @@
 int main (int argc, char *argv[])
 {
     int         sock;                   /* Socket descriptor */
-    char *      echoString;             /* String to send to echo server */
-    char        echoBuffer[RCVBUFSIZE]; /* Buffer for received string */
-    int         echoStringLen;          /* Length of string to echo */
+    char *      userInput;             /* String to send to echo server */
+    char        messageBuffer[RCVBUFSIZE]; /* Buffer for received string */
+    int         userInputLen;          /* Length of string to echo */
     int         bytesRcvd;              /* Bytes read in single recv() */
-    int         i;                      /* counter for data-arguments */
 
     parse_args (argc, argv);
 
@@ -26,38 +25,41 @@ int main (int argc, char *argv[])
     {
         printf("Socket created.\n");
 
-        for (i = 0; i < argv_nrofdata; i++)
+        while (true)
         {
-            echoString = argv_data [i];
-            echoStringLen = strlen (echoString);          /* Determine input length */
+            printf("Enter a message to send.\n");
+            scanf ("%[^\n]%*c", userInput);
 
-            delaying();
+            if (strcmp(userInput, "Quit") == 0)
+            {
+                break;
+            }
 
-            if (send(sock, echoString, echoStringLen, 0) < 0)
+            userInputLen = strlen (userInput);          /* Determine input length */
+
+            if (send(sock, userInput, userInputLen, 0) < 0)
             {
                 printf("Send failed.\n");
             }
             else
             {
-                info_s("Verbose mode", echoString);
+                printf("Message sent.\nWaiting for reply...\n");
             }
             
             for(int f = 0; f < RCVBUFSIZE; f++)
             {
-                echoBuffer[f] = '\0';
+                messageBuffer[f] = '\0';
             }
 
-            if (recv(sock, echoBuffer, RCVBUFSIZE, 0) < 0)
+            if (recv(sock, messageBuffer, RCVBUFSIZE, 0) < 0)
             {
                 printf("Receive failed.\n");
             }
             else
             {
-                printf("Received string: %s\n", echoBuffer);
-            }            
+                printf("Message received: \n%s\n", messageBuffer);
+            }
         }
-
-        delaying ();
 
         close (sock);
         info ("close & exit");
