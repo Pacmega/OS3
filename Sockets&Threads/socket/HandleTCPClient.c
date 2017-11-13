@@ -27,9 +27,20 @@ void HandleTCPClient (int clntSocket)
     while (recvMsgSize > 0)      /* zero indicates end of transmission */
     {
         // TODO: add code to print the received string; use printf()
-        
+        printf("%s\n", echoBuffer);
         // TODO: add code to convert the upper/lower chars of the received string
-        
+        for (int i = 0; i < recvMsgSize; ++i)
+        {
+            if (isupper(echoBuffer[i]))
+            {
+                echoBuffer[i] = tolower(echoBuffer[i]);
+            }
+            else
+            {
+                echoBuffer[i] = toupper(echoBuffer[i]);
+            }
+        }
+
         delaying ();
         
         /* Echo message back to client */
@@ -39,8 +50,12 @@ void HandleTCPClient (int clntSocket)
         }
 
         // TODO: add code to display the transmitted string in verbose mode; use info_s()
-
+        info_s("verbose mode", echoBuffer);
         // receive next string
+        for (int j = 0; j < RCVBUFSIZE; ++j)
+        {
+            echoBuffer[j] = '\0';
+        }
         recvMsgSize = recv (clntSocket, echoBuffer, RCVBUFSIZE-1, 0);
         if (recvMsgSize < 0)
         {

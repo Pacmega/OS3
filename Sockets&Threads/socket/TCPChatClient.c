@@ -12,7 +12,6 @@
 int main (int argc, char *argv[])
 {
     int         sock;                   /* Socket descriptor */
-    char *      echoString;             /* String to send to echo server */
     char        echoBuffer[RCVBUFSIZE]; /* Buffer for received string */
     int         echoStringLen;          /* Length of string to echo */
     int         bytesRcvd;              /* Bytes read in single recv() */
@@ -21,33 +20,32 @@ int main (int argc, char *argv[])
     parse_args (argc, argv);
 
     sock = CreateTCPClientSocket (argv_ip, argv_port);
-        
-    for (i = 0; i < argv_nrofdata; i++)
+
+    while(true)
     {
-        echoString = argv_data[i];
-        echoStringLen = strlen(echoString);          /* Determine input length */
+        char echoString[RCVBUFSIZE];
+        scanf("%[^ \n]%*c", echoString);
+        echoStringLen = strlen(echoString);
+
+        if (strcmp(echoString, "Quit") == 0)
+        {
+            printf("Spotted FBI. Now closing the client. \n");
+            break;
+        }
+
+        if (send(sock, echoString, echoStringLen, 0) == -1)
+        {
+            printf("Error sending message.");
+        }
 
         delaying();
-        
-        // TODO: add code to send this string to the server; use send()
-        if(send(sock, echoString, echoStringLen, 0) >= 0)
+        for (int i = 0; i < RCVBUFSIZE; ++i)
         {
-            info_s("verbose mode", echoString);
-        }
-        else
-        {
-            printf("Error sending message \n");
-        }
-        // TODO: add code to display the transmitted string in verbose mode; use info_s()
-
-        // TODO: add code to receive & display the converted string from the server
-        //       use recv() & printf()
-        for (int j = 0; j < RCVBUFSIZE; ++j)
-        {
-            echoBuffer[j] = '\0';
+            echoBuffer[i] = '\0';
         }
         if (recv(sock, echoBuffer, RCVBUFSIZE, 0) >= 0)
         {
+            printf("Server: ");
             printf("%s\n", echoBuffer);
         }
         else
