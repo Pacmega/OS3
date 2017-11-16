@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>     // for atoi() and exit()
 #include <unistd.h>     // for fork()
 #include <sys/wait.h>   // for waitpid()
@@ -21,7 +22,32 @@ int main(int argc, char *argv[])
     while (to_quit == false)                /* run until someone indicates to quit... */
     {
         clntSock = AcceptTCPConnection (servSock);
+        printf("Connection with client made.\nForking...\n");
 
+        processID = fork();
+        if (processID < 0)
+        {
+            printf("An error occured while attempting to fork process.\nShutting down.\n");
+            exit(1);
+        }
+        else
+        {
+            // Fork was successful
+            if (processID == 0)
+            {
+                // processID == 0: child process
+                HandleTCPClient (clntSock);
+
+                printf ("%d child exited.\n", getpid());
+                exit(0);        /* Child process terminates */
+            }
+            else
+            {
+                // processID > 0: main process
+                printf ("%d main waiting.\n", getpid());
+                sleep (2);
+            }
+        }
         // TODO: write the code to realise the following:
         //
         // fork() a new process and:
