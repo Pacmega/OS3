@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <stdio.h>
 
 #include "Auxiliary.h"
 #include "AcceptTCPConnection.h"
@@ -22,6 +23,11 @@ int main (int argc, char *argv[])
     {
         clntSock = AcceptTCPConnection (servSock);
 
+        pthread_create(&threadID, NULL, myThread, (void *)clntSock);
+        if (pthread_detach(threadID) != 0)
+        {
+            printf("An error occured while detaching a thread.\n");
+        }
         // TODO: create&start the thread myThread() te creeeren
         // use the POSIX operation pthread_create()
         //
@@ -37,6 +43,8 @@ int main (int argc, char *argv[])
 static void *
 myThread (void * threadArgs)
 {
+    int *socket = (int *)threadArgs;
+    HandleTCPClient(*socket);
     // TODO: write the code to handle the client data
     // use operation HandleTCPClient()
     //  
