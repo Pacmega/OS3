@@ -1,4 +1,5 @@
-#include <stdio.h>
+#include <stdio.h>      // for printf()
+#include <stdlib.h>     // for exit()
 #include <ctype.h>      // for isupper() etc.
 #include <sys/socket.h> // for send() and recv()
 #include <unistd.h>     // for sleep(), close()
@@ -18,7 +19,8 @@ int main (int argc, char * argv[])
     int         echoStringLen;          /* Length of string to echo */
     int         clntSock; 
     int         servSock;
-    int         recvMsgSize;            // Size of received message
+
+    char        echoString[RCVBUFSIZE];
 
     parse_args(argc, argv);
 
@@ -27,8 +29,6 @@ int main (int argc, char * argv[])
 
     while(true)
     {
-        char echoString[RCVBUFSIZE];
-
         for (int i = 0; i < RCVBUFSIZE; ++i)
         {
             echoBuffer[i] = '\0';
@@ -36,29 +36,31 @@ int main (int argc, char * argv[])
 
         if (recv(clntSock, echoBuffer, RCVBUFSIZE, 0) >= 0)
         {
-            printf("Client: ");
-            printf("%s\n", echoBuffer);
+            printf("Client: %s\n", echoBuffer);
+
+            if (strcmp(echoBuffer, "Quit") == 0) 
+            {
+                printf("Spotted FBI on client-side. Now closing the server. \n");
+                break;
+            }
         }
 
-        else
-        {
-            printf("Error receiving message \n");
-        }
-
-        scanf("%[^ \n]%*c", echoString);
+        printf("You: ");
+        scanf("%[^\n]%*c", echoString);
         echoStringLen = strlen(echoString);
-        if (strcmp(echoString, "Quit") == 0)
-        {
-            printf("Spotted FBI. Now closing the server. \n");
-            break;
-        }
 
-        if (send(clntSock, echoString, echoStringLen, 0) == -1)
+        if(send(clntSock, echoString, echoStringLen, 0) < 0)
         {
             printf("Error sending message.");
         }
+        if (strcmp(echoString, "Quit") == 0)
+        {
+            printf("Spotted FBI. Now closing Server.");
+            break;
+        }
 
     }
-    close (clntSock);    /* Close client socket */
+    close (clntSock);    /* Close client socket */ 
+    info ("close & exit");
     exit(0);
 }

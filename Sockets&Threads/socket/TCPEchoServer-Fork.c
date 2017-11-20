@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>     // for atoi() and exit()
 #include <unistd.h>     // for fork()
 #include <sys/wait.h>   // for waitpid()
@@ -22,6 +23,16 @@ int main(int argc, char *argv[])
     {
         clntSock = AcceptTCPConnection (servSock);
 
+        if(fork() != 0)
+        {
+            printf("Hello from parent \n");
+        }
+        else
+        {
+            printf("Hello from child \n");
+            HandleTCPClient(clntSock);
+            break;
+        }
         // TODO: write the code to realise the following:
         //
         // fork() a new process and:
