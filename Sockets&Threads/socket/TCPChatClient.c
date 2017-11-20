@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h>      // for printf
 #include <string.h>     // for strlen()
 #include <stdlib.h>     // for exit()
 #include <sys/socket.h> // for send() and recv()
@@ -14,49 +14,55 @@ int main (int argc, char *argv[])
     int         sock;                   /* Socket descriptor */
     char        echoBuffer[RCVBUFSIZE]; /* Buffer for received string */
     int         echoStringLen;          /* Length of string to echo */
-    int         bytesRcvd;              /* Bytes read in single recv() */
-    int         i;                      /* counter for data-arguments */
+    char        echoString[RCVBUFSIZE];
 
     parse_args (argc, argv);
 
     sock = CreateTCPClientSocket (argv_ip, argv_port);
 
+    if(sock == -1)
+    {
+        printf("Failed to create a socket. \n");
+        return -1;
+    }
+
     while(true)
     {
-        char echoString[RCVBUFSIZE];
-        scanf("%[^ \n]%*c", echoString);
+        printf("You: ");
+        scanf("%[^\n]%*c", echoString);
         echoStringLen = strlen(echoString);
 
-        if (strcmp(echoString, "Quit") == 0)
+        if (send(sock, echoString, echoStringLen, 0) < 0)
+        {
+            printf("Error sending messages\n");
+        }
+
+        if(strcmp(echoString, "Quit") == 0)
         {
             printf("Spotted FBI. Now closing the client. \n");
             break;
         }
 
-        if (send(sock, echoString, echoStringLen, 0) == -1)
-        {
-            printf("Error sending message.");
-        }
-
-        delaying();
+        // delaying();
         for (int i = 0; i < RCVBUFSIZE; ++i)
         {
             echoBuffer[i] = '\0';
         }
+
         if (recv(sock, echoBuffer, RCVBUFSIZE, 0) >= 0)
         {
-            printf("Server: ");
-            printf("%s\n", echoBuffer);
-        }
-        else
-        {
-            printf("Error receiving message \n");
+            printf("Server: %s\n", echoBuffer);
+            if (strcmp(echoBuffer, "Quit") == 0)
+            {
+                printf("Spotted FBI on server-side. Now closing the client. \n");
+                break;
+            }
         }
     }
 
-    delaying ();
+    // delaying ();
 
     close (sock);
     info ("close & exit");
-    exit (0);
+    exit(0);
 }
