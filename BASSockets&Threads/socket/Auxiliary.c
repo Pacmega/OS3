@@ -33,7 +33,7 @@ delaying (void)
 {
     if (argv_delay == true)
     {
-        sleep (1);
+        sleep (3);
     }
 }
 
