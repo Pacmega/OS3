@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "Auxiliary.h"
 #include "AcceptTCPConnection.h"
@@ -17,13 +18,13 @@ int main (int argc, char *argv[])
 
     parse_args (argc, argv);
 
-    servSock = CreateTCPServerSocket (argv_port);
+    servSock = (intptr_t) CreateTCPServerSocket (argv_port);
 
     while (to_quit == false)                /* run until someone indicates to quit... */
     {
         clntSock = AcceptTCPConnection (servSock);
 
-        pthread_create(&threadID, NULL, myThread, (void *)clntSock);
+        pthread_create(&threadID, NULL, myThread, (void *) (intptr_t) clntSock);
         if (pthread_detach(threadID) != 0)
         {
             printf("An error occured while detaching a thread.\n");
@@ -37,8 +38,8 @@ int main (int argc, char *argv[])
 static void *
 myThread (void * threadArgs)
 {
-    int *socket = (int *)threadArgs;
-    HandleTCPClient(*socket);
+    int socket = (intptr_t) threadArgs;
+    HandleTCPClient(socket);
 
     return (NULL);
 }
