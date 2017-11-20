@@ -9,37 +9,45 @@
 #include "CreateTCPServerSocket.h"
 #include "HandleTCPClient.h"
 
-#define RCVBUFSIZE 32   /* Size of receive buffer */
+#define BUFFERSIZE 32   /* Size of receive buffer */
 
 int main (int argc, char * argv[])
 {
     int servSock;                    /* Socket descriptor for server */
     int clntSock;                    /* Socket descriptor for client */
 
-    char *      userInput;             /* String to send to echo server */
-    char        messageBuffer[RCVBUFSIZE]; /* Buffer for received string */
+    char        userInput[BUFFERSIZE];     /* String to send to echo server */
+    char        messageBuffer[BUFFERSIZE]; /* Buffer for received string */
     int         userInputLen;          /* Length of string to echo */
+    int         bytesRcvd;              /* Bytes read in single recv() */
 
     parse_args (argc, argv);
     
     servSock = CreateTCPServerSocket (argv_port);
 
-    for (;;) /* Run forever */
+    for (;;)
     {
         clntSock = AcceptTCPConnection (servSock);
 
         printf("Waiting for the first message...\n");
 
-        while (true)
+        while (clntSock > 0)
         {
-            for(int f = 0; f < RCVBUFSIZE; f++)
+            for(int f = 0; f < BUFFERSIZE; f++)
             {
                 messageBuffer[f] = '\0';
             }
 
-            if (recv(clntSock, messageBuffer, RCVBUFSIZE, 0) < 0)
+            bytesRcvd = recv(clntSock, messageBuffer, BUFFERSIZE, 0);
+
+            if (bytesRcvd < 0)
             {
                 printf("Receive failed.\n");
+            }
+            else if (bytesRcvd == 0)
+            {
+                printf("Client terminated connection.\n");
+                break;
             }
             else
             {
@@ -70,5 +78,4 @@ int main (int argc, char * argv[])
         info ("close");
         exit (0);
     }
-    /* NOT REACHED */
 }

@@ -40,7 +40,7 @@ delaying (void)
 char * 
 remove_nl (char * s)
 {
-    // remove the trailing nerwline in 's' (if present)
+    // remove the trailing newline in 's' (if present)
     int len;
     
     len = strlen (s);
