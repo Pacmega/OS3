@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <stdio.h>
 
 #include "Auxiliary.h"
 #include "AcceptTCPConnection.h"
@@ -22,12 +23,14 @@ int main (int argc, char *argv[])
     {
         clntSock = AcceptTCPConnection (servSock);
 
-        // TODO: create&start the thread myThread() te creeeren
-        // use the POSIX operation pthread_create()
-        //
-        // make sure that clntSock and servSock are closed at the correct locations 
-        // (in particular: at those places where you don't need them any more)
+        void * threadArgs = *((void *)clntSock);
 
+        int threadReturn = pthread_create(&threadID, NULL, myThread, threadArgs);
+        if (threadReturn != 0)
+        {
+            printf("An error occured creating the thread. Error ID: %d \n", threadReturn);
+            return(-1);
+        }
     }
     
     // server stops...
@@ -37,12 +40,8 @@ int main (int argc, char *argv[])
 static void *
 myThread (void * threadArgs)
 {
-    // TODO: write the code to handle the client data
-    // use operation HandleTCPClient()
-    //  
-    // Hint: use the info(), info_d(), info_s() operations to trace what happens
-    //
-    // Note: a call of pthread_detach() is obligatory
-
+    int ClntSock = *((int *)threadArgs);
+    HandleTCPClient(ClntSock);
+    pthread_detach(pthread_self());
     return (NULL);
 }

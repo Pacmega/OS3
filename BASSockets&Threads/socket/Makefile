@@ -27,7 +27,7 @@ TCPEchoServer: TCPEchoServer.o $(SERVER_AUX_OBJS)
 
 TCPEchoServer-Fork: TCPEchoServer-Fork.o $(SERVER_AUX_OBJS)
 
-TCPEchoServer-Thread: TCPEchoServer-Thread.o $(SERVER_AUX_OBJS)
+TCPEchoServer-Thread: TCPEchoServer-Thread.o $(SERVER_AUX_OBJS) -lpthread
 
 TCPChatClient: TCPChatClient.o $(CLIENT_AUX_OBJS)
 
