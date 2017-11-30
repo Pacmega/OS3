@@ -9,6 +9,8 @@
 
 #include "number.h"
 
+#define NUMBERARRAYLENGTH 9 
+
 static int  shm_fd = -1;
 char* shm_fixedName = "testSHM";
 
@@ -25,6 +27,28 @@ char* shm_fixedName = "testSHM";
     
 //     return (s);
 // }
+
+number createNr(int value, char* pronunciation)
+{
+    number newNr;
+    newNr.value = value;
+    newNr.pronunciation = pronunciation;
+
+    return newNr;
+}
+
+void createStructs(number numberArray[])
+{
+    numberArray[0] = createNr(1, "Ace");
+    numberArray[1] = createNr(2, "Deuce");
+    numberArray[2] = createNr(3, "Trey");
+    numberArray[3] = createNr(4, "Cater");
+    numberArray[4] = createNr(5, "Cinque");
+    numberArray[5] = createNr(6, "Sice");
+    numberArray[6] = createNr(7, "Seven");
+    numberArray[7] = createNr(8, "Eight");
+    numberArray[8] = createNr(9, "Nine");
+}
 
 static char *
 my_shm_create (char * shm_name, int size)
@@ -92,10 +116,9 @@ int main(void)
 {
     char *      shm_addr = (char *) MAP_FAILED;
     char        line[80];
-    // char        shm_name[80];
-    int         size = -1;
     int         choice = ' ';
     int         numberStructSize = sizeof(number);
+    int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
     int         rtnval;
 
     while (choice != 'q')
@@ -112,9 +135,9 @@ int main(void)
                 // printf ("Enter size: ");
                 // fgets  (line, sizeof (line), stdin);
                 // sscanf (line, "%i", &size);
-                printf("Using size of struct number, which is: %d\n", numberStructSize);
+                printf("Using size of array of numbers, which is: %d\n", numberArraySize);
                 
-                shm_addr = my_shm_create (shm_fixedName, numberStructSize);
+                shm_addr = my_shm_create (shm_fixedName, numberArraySize);
                 break;
             case 'o':
                 printf("Using name: %s\n", shm_fixedName);
@@ -122,9 +145,21 @@ int main(void)
                 shm_addr = my_shm_open (shm_fixedName);
                 break;
             case 'w':
-                printf ("Enter date to write @ %#x:\n", (unsigned int) shm_addr);
-                fgets  (shm_addr, size, stdin);
-                //break; (no break: check written data by reading it again...)
+                printf("Commencing endless write.\n");
+
+                number numberArray[9];
+                createStructs(numberArray);
+
+                while(1)
+                {
+                    // This continues forever.
+                    for(int i = 0; i < NUMBERARRAYLENGTH; i++)
+                    {
+                        // Write the numbers in the struct to the shared memory one by one.
+                        fgets  (shm_addr, numberStructSize, numberArray[i]);
+                    }
+                }
+                
             case 'r':
                 printf ("data (@ %#x): '%s'\n", (unsigned int) shm_addr, shm_addr);
                 break;
