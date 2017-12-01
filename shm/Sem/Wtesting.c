@@ -35,7 +35,6 @@ number createNr(int value, char* pronunciation)
     number newNr;
     newNr.value = value;
     newNr.pronunciation = pronunciation;
-    newNr.structSem = SEM_FAILED;
 
     return newNr;
 }
@@ -116,28 +115,31 @@ my_shm_open (char * shm_name)
 }
 
 void
-my_sem_open (number receivedNr)
+my_sem_open (char * sem_name)
 {
-    if (receivedNr.structSem != SEM_FAILED)
+    char * sem_address;
+
+    if (sem_name != SEM_FAILED)
     {
         printf ("ERROR: another semaphore already opened\n");
         break;
     }
 
     printf("Calling sem_open on semaphore with name %s", sem_fixedName);
-    receivedNr.structSem = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
+    sem_name = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
 
-    if (receivedNr.structSem == SEM_FAILED)
+    if (sem_name == SEM_FAILED)
     {
         perror("ERROR: sem_open() failed");
     }
-    printf("sem_open() returned %p\n", receivedNr.structSem);
+    printf("sem_open() returned %p\n", sem_name);
     break;
 }
 
 int main(void)
 {
     char *      shm_addr = (char *) MAP_FAILED;
+    sem_t *     sem_addr = SEM_FAILED;
     char        line[80];
     int         choice = ' ';
     int         numberStructSize = sizeof(number);
@@ -165,8 +167,8 @@ int main(void)
 
                 shm_addr = my_shm_open (shm_fixedName);
 
-                printf("Opening number's semaphore.\n");
-                my_shm_open()
+                printf("Opening numberArray's semaphore.\n");
+                sem_addr = my_sem_open(sem_fixedName);
 
                 break;
             case 'w':

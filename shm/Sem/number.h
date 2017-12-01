@@ -5,5 +5,4 @@ typedef struct
 {
 	int value;
 	char* pronunciation;
-	sem_t * structSem;
 } number;
