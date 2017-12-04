@@ -150,6 +150,7 @@ int main(void)
     int         numberStructSize = sizeof(number);
     int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
     int         rtnval;
+    number      readNr;
 
     while (choice != 'q')
     {
@@ -177,6 +178,7 @@ int main(void)
 
                 break;
             case 'w':
+                // @Joran: make sure this doesn't segfault (semaphores mostly)
                 if (shm_addr != MAP_FAILED)
                 {
                     printf("Commencing endless write.\n");
@@ -192,8 +194,13 @@ int main(void)
                         for(; i < NUMBERARRAYLENGTH; i++)
                         {
                             // Write the numbers in the struct to the shared memory one by one.
-                            // fgets  (shm_addr, numberStructSize, numberArray[i]);
                             *shm_loc = numberArray[i];
+                            rtnval = sem_post(sem_addr);
+                            if(rtnval != 0)
+                            {
+                                perror("ERROR: sem_post() failed");
+                                break;
+                            }
                         }
                     }
 
@@ -204,10 +211,39 @@ int main(void)
                     printf("ERROR: no opened shared memory.\n");
                     break;
                 }
-                
             case 'r':
-                printf("Commencing endless read.\n");
-                printf("ERROR: READ NOT IMPLEMENTED, NEED SEMAPHORES!\n");
+                // @Joran: make sure this doesn't segfault
+                if (shm_addr != MAP_FAILED)
+                {
+                    printf("Commencing endless read.\n");
+
+                    number numberArray[9];
+                    createStructs(numberArray);
+                    number* shm_loc = (number*)shm_addr;
+
+                    while(1)
+                    {
+                        // This continues forever.
+                        
+                        rtnval = sem_wait(sem_addr);
+                        if(rtnval != 0)
+                        {
+                            perror("ERROR: sem_wait() failed");
+                            break;
+                        }
+
+                        readNr = *shm_loc;
+                        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+                    }
+
+                    break;
+                }
+                else
+                {
+                    printf("ERROR: no opened shared memory.\n");
+                    break;
+                }
+            
                 break;
             case 'c':
                 printf ("Calling close(%#x)\n", shm_fd);
