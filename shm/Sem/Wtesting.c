@@ -6,21 +6,50 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <semaphore.h>
+
+#include "number.h"
+
+#define NUMBERARRAYLENGTH 9 
 
 static int  shm_fd = -1;
+char* shm_fixedName = "testSHM";
+char* sem_fixedName = "testSEM";
 
-static char * 
-remove_nl (char * s)
+// static char * 
+// remove_nl (char * s)
+// {
+//     int len;
+    
+//     len = strlen (s);
+//     if (s [len - 1] == '\n')
+//     {
+//         s [len - 1] = '\0';
+//     }
+    
+//     return (s);
+// }
+
+number createNr(int value, char* pronunciation)
 {
-    int len;
-    
-    len = strlen (s);
-    if (s [len - 1] == '\n')
-    {
-        s [len - 1] = '\0';
-    }
-    
-    return (s);
+    number newNr;
+    newNr.value = value;
+    newNr.pronunciation = pronunciation;
+
+    return newNr;
+}
+
+void createStructs(number numberArray[])
+{
+    numberArray[0] = createNr(1, "Ace");
+    numberArray[1] = createNr(2, "Deuce");
+    numberArray[2] = createNr(3, "Trey");
+    numberArray[3] = createNr(4, "Cater");
+    numberArray[4] = createNr(5, "Cinque");
+    numberArray[5] = createNr(6, "Sice");
+    numberArray[6] = createNr(7, "Seven");
+    numberArray[7] = createNr(8, "Eight");
+    numberArray[8] = createNr(9, "Nine");
 }
 
 static char *
@@ -85,13 +114,36 @@ my_shm_open (char * shm_name)
     return (shm_addr);
 }
 
+void
+my_sem_open (char * sem_name)
+{
+    char * sem_address;
+
+    if (sem_name != SEM_FAILED)
+    {
+        printf ("ERROR: another semaphore already opened\n");
+        break;
+    }
+
+    printf("Calling sem_open on semaphore with name %s", sem_fixedName);
+    sem_name = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
+
+    if (sem_name == SEM_FAILED)
+    {
+        perror("ERROR: sem_open() failed");
+    }
+    printf("sem_open() returned %p\n", sem_name);
+    break;
+}
+
 int main(void)
 {
     char *      shm_addr = (char *) MAP_FAILED;
+    sem_t *     sem_addr = SEM_FAILED;
     char        line[80];
-    char        shm_name[80];
-    int         size = -1;
     int         choice = ' ';
+    int         numberStructSize = sizeof(number);
+    int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
     int         rtnval;
 
     while (choice != 'q')
@@ -104,28 +156,42 @@ int main(void)
         switch (choice)
         {
             case 'n':
-                printf ("Enter name: ");
-                fgets  (shm_name, sizeof (shm_name), stdin);
-                remove_nl (shm_name);
-                printf ("Enter size: ");
-                fgets  (line, sizeof (line), stdin);
-                sscanf (line, "%i", &size);
+                printf("Using name: %s\n", shm_fixedName);
+                printf("Using size of array of numbers, which is: %d\n", numberArraySize);
                 
-                shm_addr = my_shm_create (shm_name, size);
+                shm_addr = my_shm_create (shm_fixedName, numberArraySize);
+
                 break;
             case 'o':
-                printf ("Enter name: ");
-                fgets  (shm_name, sizeof (shm_name), stdin);
-                remove_nl (shm_name);
-                
-                shm_addr = my_shm_open (shm_name);
+                printf("Using name: %s\n", shm_fixedName);
+
+                shm_addr = my_shm_open (shm_fixedName);
+
+                printf("Opening numberArray's semaphore.\n");
+                sem_addr = my_sem_open(sem_fixedName);
+
                 break;
             case 'w':
-                printf ("Enter date to write @ %#x:\n", (unsigned int) shm_addr);
-                fgets  (shm_addr, size, stdin);
-                //break; (no break: check written data by reading it again...)
+                printf("Commencing endless write.\n");
+
+                number numberArray[9];
+                createStructs(numberArray);
+                number* shm_loc = (number*)shm_addr;
+
+                while(1)
+                {
+                    // This continues forever.
+                    for(int i = 0; i < NUMBERARRAYLENGTH; i++)
+                    {
+                        // Write the numbers in the struct to the shared memory one by one.
+                        // fgets  (shm_addr, numberStructSize, numberArray[i]);
+                        *shm_loc = numberArray[i];
+                    }
+                }
+                
             case 'r':
-                printf ("data (@ %#x): '%s'\n", (unsigned int) shm_addr, shm_addr);
+                printf("Commencing endless read.\n");
+                printf("ERROR: READ NOT IMPLEMENTED, NEED SEMAPHORES!\n");
                 break;
             case 'c':
                 printf ("Calling close(%#x)\n", shm_fd);
@@ -138,11 +204,9 @@ int main(void)
                 shm_fd = -1;
                 break;
             case 'u':
-                printf ("Enter name: ");
-                fgets  (shm_name, sizeof (shm_name), stdin);
-                remove_nl (shm_name);
-                printf ("Calling shm_unlink('%s')\n", shm_name);
-                rtnval = shm_unlink (shm_name);
+                printf("Using name: %s\n", shm_fixedName);
+                printf ("Calling shm_unlink('%s')\n", shm_fixedName);
+                rtnval = shm_unlink (shm_fixedName);
                 if (rtnval != 0)
                 {
                     perror ("ERROR: shm_unlink() failed");
@@ -169,5 +233,5 @@ int main(void)
                 break;
         }
     }
-	return (0);
+    return (0);
 }

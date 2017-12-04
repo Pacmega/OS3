@@ -29,14 +29,13 @@ remove_nl (char * s)
     return (s);
 }
 
-
 int main(void)
 {
-    sem_t *     semdes = SEM_FAILED;
+	sem_t *     semdes = SEM_FAILED;
     char        line[80];
     char        sem_name[80];
     int         value;
-    int         permissions;
+    // int         permissions;
     int         choice = ' ';
     int         rtnval;
 
