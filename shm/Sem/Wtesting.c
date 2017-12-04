@@ -115,25 +115,30 @@ my_shm_open (char * shm_name)
 }
 
 void
-my_sem_open (char * sem_name)
+my_sem_open (sem_t * semaphore)
 {
-    char * sem_address;
-
-    if (sem_name != SEM_FAILED)
+    if (semaphore != SEM_FAILED)
     {
         printf ("ERROR: another semaphore already opened\n");
-        break;
+        return;
     }
 
-    printf("Calling sem_open on semaphore with name %s", sem_fixedName);
-    sem_name = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
+    printf("Calling sem_open on semaphore with name %s\n", sem_fixedName);
+    semaphore = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
 
-    if (sem_name == SEM_FAILED)
+    if (semaphore == SEM_FAILED)
     {
-        perror("ERROR: sem_open() failed");
+        // File exists, try to open it
+        semaphore = sem_open(sem_fixedName, 0);
+
+        if (semaphore == SEM_FAILED)
+        {
+            // Something else is wrong
+            perror("ERROR: semaphore already exists");
+        }
     }
-    printf("sem_open() returned %p\n", sem_name);
-    break;
+
+    printf("sem_open() returned %p\n", semaphore);
 }
 
 int main(void)
@@ -168,25 +173,36 @@ int main(void)
                 shm_addr = my_shm_open (shm_fixedName);
 
                 printf("Opening numberArray's semaphore.\n");
-                sem_addr = my_sem_open(sem_fixedName);
+                my_sem_open(sem_addr);
 
                 break;
             case 'w':
-                printf("Commencing endless write.\n");
-
-                number numberArray[9];
-                createStructs(numberArray);
-                number* shm_loc = (number*)shm_addr;
-
-                while(1)
+                if (shm_addr != MAP_FAILED)
                 {
-                    // This continues forever.
-                    for(int i = 0; i < NUMBERARRAYLENGTH; i++)
+                    printf("Commencing endless write.\n");
+
+                    number numberArray[9];
+                    createStructs(numberArray);
+                    number* shm_loc = (number*)shm_addr;
+
+                    while(1)
                     {
-                        // Write the numbers in the struct to the shared memory one by one.
-                        // fgets  (shm_addr, numberStructSize, numberArray[i]);
-                        *shm_loc = numberArray[i];
+                        // This continues forever.
+                        int i = 0;
+                        for(; i < NUMBERARRAYLENGTH; i++)
+                        {
+                            // Write the numbers in the struct to the shared memory one by one.
+                            // fgets  (shm_addr, numberStructSize, numberArray[i]);
+                            *shm_loc = numberArray[i];
+                        }
                     }
+
+                    break;
+                }
+                else
+                {
+                    printf("ERROR: no opened shared memory.\n");
+                    break;
                 }
                 
             case 'r':
