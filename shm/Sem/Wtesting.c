@@ -16,20 +16,6 @@ static int  shm_fd = -1;
 char* shm_fixedName = "testSHM";
 char* sem_fixedName = "testSEM";
 
-// static char * 
-// remove_nl (char * s)
-// {
-//     int len;
-    
-//     len = strlen (s);
-//     if (s [len - 1] == '\n')
-//     {
-//         s [len - 1] = '\0';
-//     }
-    
-//     return (s);
-// }
-
 number createNr(int value, char* pronunciation)
 {
     number newNr;
