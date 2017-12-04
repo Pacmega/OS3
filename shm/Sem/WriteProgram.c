@@ -93,6 +93,12 @@ int main(void)
     	}
     }
 
+    // TODO: create multithreading to be able to handle input
+    //       Note: make a sleep before commencing the mass R/W
+    // TODO: using multithreading, merge read & write code
+    // TODO: using multithreading, catch ctrl-C as an interrupt to shut down
+    // TODO: implement a buffer to read & write from multiple positions
+
     // Program should not be able to reach end in normal flow, so if end is reached return an error code.
     return -1;
 }

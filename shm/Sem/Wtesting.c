@@ -198,7 +198,6 @@ int main(void)
                     break;
                 }
             case 'r':
-                // @Joran: make sure this doesn't segfault
                 if (shm_addr != MAP_FAILED)
                 {
                     printf("Commencing endless read.\n");

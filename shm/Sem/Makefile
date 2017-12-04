@@ -9,8 +9,8 @@ CFLAGS = -O2 -Wall -lrt -pthread -o
 MAIN_SOURCE_A = ProcessA.c
 MAIN_SOURCE_B = ProcessB.c
 TEST_SOURCE_W = Wtesting.c
-WRITE = WriteProgram.c
-READ = ReadProgram.c
+WRITE = WriteProgram.c semshm.c
+READ = ReadProgram.c semshm.c
 
 GCC = gcc
 
@@ -37,3 +37,4 @@ clean:
 	@rm -rf $(PROJECT_NAME_A)
 	@rm -rf $(PROJECT_NAME_B)
 	@rm -rf $(PROJECT_NAME_W)
+	@rm -rf $(PROJECT_NAME_R)
