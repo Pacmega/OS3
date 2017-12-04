@@ -152,7 +152,7 @@ int main(void)
                 printf("Using size of array of numbers, which is: %d\n", numberArraySize);
                 
                 shm_addr = my_shm_create (shm_fixedName, numberArraySize);
-
+                my_sem_open(&sem_addr);
                 break;
             case 'o':
                 printf("Using name: %s\n", shm_fixedName);
@@ -171,15 +171,20 @@ int main(void)
 
                     number numberArray[9];
                     createStructs(numberArray);
+                    printf("Test 1\n");
                     number* shm_loc = (number*)shm_addr;
+                    printf("Test 2\n");
 
                     while(1)
                     {
                         // This continues forever.
                         int i = 0;
+
                         for(; i < NUMBERARRAYLENGTH; i++)
                         {
                             // Write the numbers in the struct to the shared memory one by one.
+                            printf("return: %d\n", sem_wait(sem_addr));
+                            printf("Entered writing \n");
                             *shm_loc = numberArray[i];
                             rtnval = sem_post(sem_addr);
                             if(rtnval != 0)
@@ -219,6 +224,12 @@ int main(void)
 
                         readNr = *shm_loc;
                         printf("%d - %s\n", readNr.value, readNr.pronunciation);
+                        rtnval = sem_post(sem_addr);
+                            if(rtnval != 0)
+                            {
+                                perror("ERROR: sem_post() failed");
+                                break;
+                            }
                     }
 
                     break;
@@ -258,8 +269,8 @@ int main(void)
                         "========\n"
                         "    [n]  create new shm\n"
                         "    [o]  open existing shm\n"
-                        "    [w]  write\n"
-                        "    [r]  read\n"
+                        "    [w]  endless write\n"
+                        "    [r]  endless read\n"
                         "    [c]  close\n"
                         "    [u]  unlink\n"
                         "    [h]  help\n"

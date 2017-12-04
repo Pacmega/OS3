@@ -135,14 +135,14 @@ int main(void)
                     perror ("ERROR: close() failed");
                 }
                 printf ("close() returned %d\n", rtnval);
-                shm_fd = -1;
+                shm_fd = -1;                                                                    // Reset directory, to restart
                 break;
             case 'u':
                 printf ("Enter name: ");
                 fgets  (shm_name, sizeof (shm_name), stdin);
                 remove_nl (shm_name);
                 printf ("Calling shm_unlink('%s')\n", shm_name);
-                rtnval = shm_unlink (shm_name);
+                rtnval = shm_unlink (shm_name);                                                 // Removes and (once every process is unmapped) destroys the contents of the segment
                 if (rtnval != 0)
                 {
                     perror ("ERROR: shm_unlink() failed");
