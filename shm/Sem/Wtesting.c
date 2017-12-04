@@ -58,23 +58,23 @@ my_shm_create (char * shm_name, int size)
     int     rtnval;
     char *  shm_addr;
     
-    printf ("Calling shm_open('%s')\n", shm_name);
+    // printf ("Calling shm_open('%s')\n", shm_name);
     shm_fd = shm_open (shm_name, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (shm_fd == -1)
     {
         perror ("ERROR: shm_open() failed");
     }
-    printf ("shm_open() returned %d\n", shm_fd);
+    // printf ("shm_open() returned %d\n", shm_fd);
                 
-    printf ("Calling ftrucate(%d,%d)\n", shm_fd, size);
+    // printf ("Calling ftrucate(%d,%d)\n", shm_fd, size);
     rtnval = ftruncate (shm_fd, size);
     if (rtnval != 0)
     {
         perror ("ERROR: ftruncate() failed");
     }
-    printf ("ftruncate() returned %d\n", rtnval);
+    // printf ("ftruncate() returned %d\n", rtnval);
                 
-    printf ("Calling mmap(len=%d,fd=%d)\n", size, shm_fd);
+    // printf ("Calling mmap(len=%d,fd=%d)\n", size, shm_fd);
     shm_addr = (char *) mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shm_addr == MAP_FAILED)
     {
@@ -91,19 +91,19 @@ my_shm_open (char * shm_name)
     int     size;
     char *  shm_addr;
     
-    printf ("Calling shm_open('%s')\n", shm_name);
+    // printf ("Calling shm_open('%s')\n", shm_name);
     shm_fd = shm_open (shm_name, O_RDWR, 0600);
     if (shm_fd == -1)
     {
         perror ("ERROR: shm_open() failed");
     }
-    printf ("shm_open() returned %d\n", shm_fd);
+    // printf ("shm_open() returned %d\n", shm_fd);
                 
-    printf ("Calling lseek(fd=%d,SEEK_END)\n", shm_fd);
+    // printf ("Calling lseek(fd=%d,SEEK_END)\n", shm_fd);
     size = lseek (shm_fd, 0, SEEK_END);
-    printf ("lseek() returned %d\n", size);
+    // printf ("lseek() returned %d\n", size);
                 
-    printf ("Calling mmap(len=%d,fd=%d)\n", size, shm_fd);
+    // printf ("Calling mmap(len=%d,fd=%d)\n", size, shm_fd);
     shm_addr = (char *) mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shm_addr == MAP_FAILED)
     {
@@ -115,30 +115,30 @@ my_shm_open (char * shm_name)
 }
 
 void
-my_sem_open (sem_t * semaphore)
+my_sem_open (sem_t ** semaphore)
 {
-    if (semaphore != SEM_FAILED)
+    if (*semaphore != SEM_FAILED)
     {
         printf ("ERROR: another semaphore already opened\n");
         return;
     }
 
-    printf("Calling sem_open on semaphore with name %s\n", sem_fixedName);
-    semaphore = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
+    // printf("Calling sem_open on semaphore with name %s\n", sem_fixedName);
+    *semaphore = sem_open(sem_fixedName, O_CREAT | O_EXCL, 0600, 1);
 
-    if (semaphore == SEM_FAILED)
+    if (*semaphore == SEM_FAILED)
     {
         // File exists, try to open it
-        semaphore = sem_open(sem_fixedName, 0);
+        *semaphore = sem_open(sem_fixedName, 0);
 
-        if (semaphore == SEM_FAILED)
+        if (*semaphore == SEM_FAILED)
         {
             // Something else is wrong
             perror("ERROR: semaphore already exists");
         }
     }
 
-    printf("sem_open() returned %p\n", semaphore);
+    printf("sem_open() returned %p\n", *semaphore);
 }
 
 int main(void)
@@ -174,8 +174,8 @@ int main(void)
                 shm_addr = my_shm_open (shm_fixedName);
 
                 printf("Opening numberArray's semaphore.\n");
-                my_sem_open(sem_addr);
-
+                my_sem_open(&sem_addr);
+                printf("%p\n", sem_addr);
                 break;
             case 'w':
                 // @Joran: make sure this doesn't segfault (semaphores mostly)
@@ -189,6 +189,10 @@ int main(void)
 
                     while(1)
                     {
+                        if (sem_addr == SEM_FAILED)
+                        {
+                            printf("What the fuck did you just fucking say about me, you little bitch? I’ll have you know I graduated top of my class in the Navy Seals, and I’ve been involved in numerous secret raids on Al-Quaeda, and I have over 300 confirmed kills. I am trained in gorilla warfare and I’m the top sniper in the entire US armed forces. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Earth, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of spies across the USA and your IP is being traced right now so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your life. You’re fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that’s just with my bare hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the United States Marine Corps and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little “clever” comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn’t, you didn’t, and now you’re paying the price, you goddamn idiot. I will shit fury all over you and you will drown in it. You’re fucking dead, kiddo.\n");
+                        }
                         // This continues forever.
                         int i = 0;
                         for(; i < NUMBERARRAYLENGTH; i++)
