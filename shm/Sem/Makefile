@@ -1,5 +1,6 @@
 PROJECT_NAME_A = semaphoresA
 PROJECT_NAME_B = semaphoresB
+PROJECT_NAME_TEST = semaphoresT
 PROJECT_NAME_W = semaphoresW
 PROJECT_NAME_R = semaphoresR
 
@@ -31,7 +32,7 @@ read: $(READ)
 	$(GCC) $(READ) $(CFLAGS) $(PROJECT_NAME_R)
 
 test: $(TEST_SOURCE_W) 
-	$(GCC) $(TEST_SOURCE_W) $(CFLAGS) $(PROJECT_NAME_W)
+	$(GCC) $(TEST_SOURCE_W) $(CFLAGS) $(PROJECT_NAME_TEST)
 
 clean:
 	@rm -rf $(PROJECT_NAME_A)

@@ -13,8 +13,8 @@
 #define NUMBERARRAYLENGTH 9 
 
 static int  shm_fd = -1;
-char* shm_fixedName = "testSHM";
-char* sem_fixedName = "testSEM";
+char* shm_fixedName = "memory";
+char* sem_fixedName = "semaphore";
 
 number createNr(int value, char* pronunciation)
 {
