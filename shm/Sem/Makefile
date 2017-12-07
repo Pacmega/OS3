@@ -2,8 +2,8 @@ PROJECT_NAME_A = semaphoresA
 PROJECT_NAME_B = semaphoresB
 PROJECT_NAME_TEST = semaphoresT
 PROJECT_FINAL  = semaphores
-
-CFLAGS = -O2 -Wall -Werror -lrt -pthread -o
+# -Werror
+CFLAGS = -O2 -Wall -lrt -pthread -o
 
 MAIN_SOURCE_A = ProcessA.c
 MAIN_SOURCE_B = ProcessB.c
@@ -13,8 +13,6 @@ PROJECT = SemaphoreReadWriteProgram.c semshm.c
 GCC = gcc
 
 all: sourceA sourceB
-
-rw: project
 
 sourceA: $(MAIN_SOURCE_A) 
 	$(GCC) $(MAIN_SOURCE_A) $(CFLAGS) $(PROJECT_NAME_A)

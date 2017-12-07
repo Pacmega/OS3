@@ -10,30 +10,21 @@
 #include <signal.h>		// For the keyboard interrupt
 #include <stdbool.h>	// Booleans
 
-#include "number.h" 	// Data about the struct
+#include "structs.h" 	// Data about the multithreading and number structs
 #include "semshm.h" 	// Semaphore & shared memory management functions
 
-const int NumberArrayLength = 9;
+#define NUMBERARRAYLENGTH 9;
+
+// It seems like this one needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
+
+static void * writingThread (void * arg);
+static void * readingThread (void * arg);
 
 number createNr(int value, char* pronunciation);
 void createStructs(number numberArray[]);
 void  InterruptHandler(int sig);
 void cleanUp();
-
-static void * writingThread (void * arg)
-{
-	// TODO: write code for proper thread
-
-	return (NULL);
-}
-
-static void * readingThread (void * arg)
-{
-	// TODO: write code for proper thread
-
-	return (NULL);
-}
 
 int main(void)
 {
@@ -46,32 +37,33 @@ int main(void)
     pthread_t   readThread;
 
     // Semaphore and Shared Memory
-    char *      shm_addr = (char *) MAP_FAILED;
-    sem_t *     sem_addr = SEM_FAILED;
+    multithreading MTstruct;
+    MTstruct.sharedMem = (char *) MAP_FAILED;
+    MTstruct.semaphore = SEM_FAILED;
 
     // Other variables that are used throughout the program.
     int         numberStructSize = sizeof(number);
-    int         numberArraySize = NumberArrayLength * numberStructSize;
+    int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
     int         rtnval;
 
     // Names for both shared memory and the semaphore are set in semshm.c
-    shm_addr = my_shm_open();	// Open the shared memory and save the address
-    my_sem_open(&sem_addr);		// Open the passed semaphore
+    MTstruct.sharedMem = my_shm_open();	// Open the shared memory and save the address
+    my_sem_open(&MTstruct.semaphore);		// Open the passed semaphore
 
-    if (sem_addr == SEM_FAILED)
+    if (MTstruct.semaphore == SEM_FAILED)
     {
     	printf("Critical error: unable to open semaphore.");
 
     	// Unable to properly execute without semaphore, shut down.
     	return -1;
     }
-    else if (shm_addr == MAP_FAILED)
+    else if (MTstruct.sharedMem == MAP_FAILED)
     {
     	// Attempt to create the SHM instead of opening it
 
-    	shm_addr = my_shm_create(numberArraySize);
+    	MTstruct.sharedMem = my_shm_create(numberArraySize);
 
-    	if (shm_addr == MAP_FAILED)
+    	if (MTstruct.sharedMem == MAP_FAILED)
     	{
     		printf("Critical error: unable to open or create shared memory.\n");
 
@@ -85,7 +77,7 @@ int main(void)
 
     number numberArray[9];
     createStructs(numberArray);
-    number* shm_number = (number*)shm_addr;
+    number* shm_number = (number*)MTstruct.sharedMem;
 
     // TODO: Part of testing, fix location (separate thread, most likely)
     number readNr;
@@ -94,18 +86,18 @@ int main(void)
     {
     	// This continues until ctrl-c is pressed.
     	int i = 0;
-    	for(; i < NumberArrayLength; i++)
+    	for(; i < NUMBERARRAYLENGTH; i++)
     	{
     	    // Write the numbers in the struct to the shared memory one by one.
     	    *shm_number = numberArray[i];
-    	    rtnval = sem_post(sem_addr);
+    	    rtnval = sem_post(MTstruct.semaphore);
     	    if(rtnval != 0)
     	    {
     	        perror("ERROR: sem_post() failed");
     	        break;
     	    }
 
-	    	rtnval = sem_wait(sem_addr);
+	    	rtnval = sem_wait(MTstruct.semaphore);
 	        if(rtnval != 0)
 	        {
 	            perror("ERROR: sem_wait() failed");
@@ -130,6 +122,25 @@ int main(void)
     return -1;
 }
 
+// Code for both threads
+
+static void * writingThread (void * arg)
+{
+	
+	// TODO: write code for proper thread
+
+	return (NULL);
+}
+
+static void * readingThread (void * arg)
+{
+	// TODO: write code for proper thread
+
+	return (NULL);
+}
+
+// All other functions
+
 number createNr(int value, char* pronunciation)
 {
     number newNr;
@@ -141,6 +152,7 @@ number createNr(int value, char* pronunciation)
 
 void createStructs(number numberArray[])
 {
+	// This function only works specifically with an array of 9 or more 
     numberArray[0] = createNr(1, "Ace");
     numberArray[1] = createNr(2, "Deuce");
     numberArray[2] = createNr(3, "Trey");
