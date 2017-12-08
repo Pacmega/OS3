@@ -9,11 +9,12 @@
 #include <semaphore.h>	// Semaphores
 #include <signal.h>		// For the keyboard interrupt
 #include <stdbool.h>	// Booleans
+#include <pthread.h>	// Threads
 
 #include "structs.h" 	// Data about the multithreading and number structs
 #include "semshm.h" 	// Semaphore & shared memory management functions
 
-#define NUMBERARRAYLENGTH 9;
+#define NUMBERARRAYLENGTH 9
 
 // It seems like this one needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
@@ -44,7 +45,7 @@ int main(void)
     // Other variables that are used throughout the program.
     int         numberStructSize = sizeof(number);
     int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
-    int         rtnval;
+    // int         rtnval; Code using this was moved to a thread but doesn't work yet
 
     // Names for both shared memory and the semaphore are set in semshm.c
     MTstruct.sharedMem = my_shm_open();	// Open the shared memory and save the address
@@ -72,16 +73,23 @@ int main(void)
     	}
     }
 
-    // When this point in the program is reached, the semaphore and shared memory have been
-    // prepared for usage. Now, create the array of numbers.
+    // Commented because the content using this was moved to threads but doesn't work yet
+    // number* shm_number = (number*)MTstruct.sharedMem;
 
-    number numberArray[9];
-    createStructs(numberArray);
-    number* shm_number = (number*)MTstruct.sharedMem;
+    // Create both threads
+    if (pthread_create (&writeThread, NULL, writingThread, &MTstruct) != 0)
+    {
+        perror ("writing thread");
+    }
+    if (pthread_create (&readThread, NULL, readingThread, &MTstruct) != 0)
+    {
+        perror ("reading thread");
+    }
 
-    // TODO: Part of testing, fix location (separate thread, most likely)
-    number readNr;
-
+    (void) pthread_join(writeThread, NULL);
+    (void) pthread_join(readThread, NULL);
+    
+    /* Mass commented because this was all moved to threads but isn't entirely functional yet
     while(!interruptDetected)
     {
     	// This continues until ctrl-c is pressed.
@@ -105,9 +113,11 @@ int main(void)
 	        }
 
 	        readNr = *shm_number;
-	        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+	        // printf("%d - %s\n", readNr.value, readNr.pronunciation);
+	        printf("Sem: %s\n", MTstruct.semaphore);
     	}
     }
+    */
 
     // TODO: create multithreading to be able to handle input
     //       Note: make a sleep before commencing the mass R/W
@@ -118,7 +128,6 @@ int main(void)
 
     // Program should not be able to reach end in normal flow, so if end is reached return an error code.
 
-    cleanUp();
     return -1;
 }
 
@@ -126,7 +135,31 @@ int main(void)
 
 static void * writingThread (void * arg)
 {
-	
+	// Convert the given argument back to a Multithreading struct
+	multithreading * MTstruct = (multithreading *) arg;
+
+	int rtnval;
+	number numberArray[9];
+    createStructs(numberArray);
+
+    number* shm_number = (number*)MTstruct->sharedMem;
+
+    while(!interruptDetected)
+    {
+    	
+    	// Write the numbers in the struct to the shared memory one by one.
+	    *shm_number = numberArray[(int)MTstruct->semaphore];
+	    // TODO: does converting the semaphore to an int like this work?
+
+		rtnval = sem_post(MTstruct->semaphore);
+		printf("[DBG] writingThread while loop\n");
+	    if(rtnval != 0)
+	    {
+	        perror("ERROR: sem_post() failed");
+	        break;
+	    }
+    }
+    
 	// TODO: write code for proper thread
 
 	return (NULL);
@@ -134,6 +167,28 @@ static void * writingThread (void * arg)
 
 static void * readingThread (void * arg)
 {
+	// Convert the given argument back to a Multithreading struct
+	multithreading * MTstruct = (multithreading *) arg;
+
+	int rtnval;
+	number readNr;
+
+	number* shm_number = (number*)MTstruct->sharedMem;
+
+	while(!interruptDetected)
+    {
+    	rtnval = sem_wait(MTstruct->semaphore);
+    	printf("[DBG] readingThread while loop\n");
+        if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
+
+        readNr = *shm_number;
+        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+    }
+
 	// TODO: write code for proper thread
 
 	return (NULL);
@@ -152,6 +207,7 @@ number createNr(int value, char* pronunciation)
 
 void createStructs(number numberArray[])
 {
+	printf("[DBG] Creating array\n");
 	// This function only works specifically with an array of 9 or more 
     numberArray[0] = createNr(1, "Ace");
     numberArray[1] = createNr(2, "Deuce");
@@ -169,9 +225,4 @@ void  InterruptHandler(int sig)
     signal(sig, SIG_IGN);
     printf("Keyboard interrupt detected. Shutting down...\n");
     interruptDetected = true;
-}
-
-void cleanUp()
-{
-	// TODO: implement cleanup to properly delete pointers
 }
