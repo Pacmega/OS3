@@ -14,7 +14,7 @@
 
 char * my_shm_create (int size)
 {
-    char* shm_fixedName = "memory";
+    char* shm_fixedName = "gedeeldGeheugen";
 
     int     rtnval;
     char *  shm_addr;
@@ -49,7 +49,7 @@ char * my_shm_create (int size)
 
 char * my_shm_open ()
 {
-    char* shm_fixedName = "memory";
+    char* shm_fixedName = "semafoor";
 
     int     size;
     char *  shm_addr;
