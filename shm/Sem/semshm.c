@@ -24,7 +24,7 @@ char * my_shm_create (int size)
     shm_filedescriptor = shm_open (shm_fixedName, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (shm_filedescriptor == -1)
     {
-        perror ("ERROR: shm_open() failed");
+        perror ("ERROR: shm_open() failed in my_shm_create");
     }
     // printf ("shm_open() returned %d\n", shm_filedescriptor);
                 
@@ -59,7 +59,7 @@ char * my_shm_open ()
     shm_filedescriptor = shm_open (shm_fixedName, O_RDWR, 0600);
     if (shm_filedescriptor == -1)
     {
-        perror ("ERROR: shm_open() failed");
+        perror ("ERROR: shm_open() failed in my_shm_open");
     }
     // printf ("shm_open() returned %d\n", shm_filedescriptor);
                 
