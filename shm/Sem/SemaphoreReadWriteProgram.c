@@ -45,7 +45,10 @@ int main(void)
     // Other variables that are used throughout the program.
     int         numberStructSize = sizeof(number);
     int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
-    // int         rtnval; Code using this was moved to a thread but doesn't work yet
+
+    printf("[DBG] Annihilating existing shm & sem\n");
+    shmCleanup();
+    semCleanup(&MTstruct.semaphore);
 
     // Names for both shared memory and the semaphore are set in semshm.c
     MTstruct.sharedMem = my_shm_open();	// Open the shared memory and save the address
@@ -72,9 +75,6 @@ int main(void)
     		return -1;
     	}
     }
-
-    // Commented because the content using this was moved to threads but doesn't work yet
-    // number* shm_number = (number*)MTstruct.sharedMem;
 
     // Create both threads
     if (pthread_create (&writeThread, NULL, writingThread, &MTstruct) != 0)
@@ -135,10 +135,11 @@ int main(void)
 
 static void * writingThread (void * arg)
 {
-	// Convert the given argument back to a Multithreading struct
+	// Convert the given argument to a Multithreading pointer
 	multithreading * MTstruct = (multithreading *) arg;
 
 	int rtnval;
+	int semValue;
 	number numberArray[9];
     createStructs(numberArray);
 
@@ -146,21 +147,32 @@ static void * writingThread (void * arg)
 
     while(!interruptDetected)
     {
-    	
     	// Write the numbers in the struct to the shared memory one by one.
-	    *shm_number = numberArray[(int)MTstruct->semaphore];
-	    // TODO: does converting the semaphore to an int like this work?
+    	rtnval = sem_getvalue (MTstruct->semaphore, &semValue);
+    	if(rtnval != 0)
+    	{
+    		perror("ERROR: sem_getvalue() failed");
+    		break;
+    	}
 
+	    *shm_number = numberArray[semValue];
+	    
 		rtnval = sem_post(MTstruct->semaphore);
-		printf("[DBG] writingThread while loop\n");
+		// printf("[DBG] writingThread while loop\n");
+	    
 	    if(rtnval != 0)
 	    {
 	        perror("ERROR: sem_post() failed");
 	        break;
 	    }
+
+	    rtnval = sem_wait(MTstruct->semaphore);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
     }
-    
-	// TODO: write code for proper thread
 
 	return (NULL);
 }
@@ -171,6 +183,7 @@ static void * readingThread (void * arg)
 	multithreading * MTstruct = (multithreading *) arg;
 
 	int rtnval;
+	int semValue;
 	number readNr;
 
 	number* shm_number = (number*)MTstruct->sharedMem;
@@ -178,6 +191,7 @@ static void * readingThread (void * arg)
 	while(!interruptDetected)
     {
     	rtnval = sem_wait(MTstruct->semaphore);
+
     	printf("[DBG] readingThread while loop\n");
         if(rtnval != 0)
         {
@@ -185,11 +199,17 @@ static void * readingThread (void * arg)
             break;
         }
 
+        rtnval = sem_getvalue (MTstruct->semaphore, &semValue);
+    	if(rtnval != 0)
+    	{
+    		perror("ERROR: sem_getvalue() failed");
+    		break;
+    	}
+
+    	// TODO: how to read further down the array?
         readNr = *shm_number;
         printf("%d - %s\n", readNr.value, readNr.pronunciation);
     }
-
-	// TODO: write code for proper thread
 
 	return (NULL);
 }
@@ -198,7 +218,7 @@ static void * readingThread (void * arg)
 
 number createNr(int value, char* pronunciation)
 {
-    number newNr;
+	number newNr;
     newNr.value = value;
     newNr.pronunciation = pronunciation;
 
@@ -207,7 +227,6 @@ number createNr(int value, char* pronunciation)
 
 void createStructs(number numberArray[])
 {
-	printf("[DBG] Creating array\n");
 	// This function only works specifically with an array of 9 or more 
     numberArray[0] = createNr(1, "Ace");
     numberArray[1] = createNr(2, "Deuce");

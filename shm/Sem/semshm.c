@@ -49,7 +49,7 @@ char * my_shm_create (int size)
 
 char * my_shm_open ()
 {
-    char* shm_fixedName = "semafoor";
+    char* shm_fixedName = "gedeeldGeheugen";
 
     int     size;
     char *  shm_addr;
@@ -80,7 +80,7 @@ char * my_shm_open ()
 
 void my_sem_open (sem_t ** semaphore)
 {
-    char* sem_fixedName = "semaphore";
+    char* sem_fixedName = "semafoor";
 
     if (*semaphore != SEM_FAILED)
     {
@@ -104,4 +104,28 @@ void my_sem_open (sem_t ** semaphore)
     }
 
     printf("sem_open() returned %p\n", *semaphore);
+}
+
+void shmCleanup ()
+{
+    char* shm_fixedName = "gedeeldGeheugen";
+    int     rtnval;
+
+    rtnval = shm_unlink (shm_fixedName);
+    if (rtnval != 0)
+    {
+        perror ("ERROR: shm_unlink() failed");
+    }
+}
+
+void semCleanup (sem_t ** semaphore)
+{
+    char* sem_fixedName = "semafoor";
+    int     rtnval;
+
+    rtnval = sem_unlink (sem_fixedName);
+    if (rtnval != 0)
+    {
+        perror ("ERROR: sem_unlink() failed");
+    }
 }
