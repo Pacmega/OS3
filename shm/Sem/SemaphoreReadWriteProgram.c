@@ -146,8 +146,8 @@ static void * writingThread (void * arg)
 
 	int rtnval;
     int positionToWrite;
-	int positionInNrArray = 0;
-	number numberArray[9];
+	int positionInNrArray = 0; // Start at position 0 of the array.
+	number numberArray[NUMBERARRAYLENGTH];
     createStructs(numberArray);
 
     number* shm_number = (number*)MTstruct->sharedMem;
@@ -181,7 +181,9 @@ static void * writingThread (void * arg)
 	    }
 
         // Change the integer that determines which number is written to the buffer.
-        if(positionInNrArray < 8)
+        // The -1 is required because the array started at 0 but has a length of NUMBERARRAYLENGTH items,
+        // which means the last entry in the array is at NUMBERARRAYLENGTH - 1.
+        if(positionInNrArray < NUMBERARRAYLENGTH - 1)
         {
             positionInNrArray++;
         }
