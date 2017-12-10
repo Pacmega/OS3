@@ -8,7 +8,7 @@
 #include <sys/fcntl.h>
 #include <semaphore.h>
 
-#include "number.h"
+#include "structs.h"
 #include "semshm.h"
 
 char * my_shm_create (int size, char* shmName)
@@ -90,7 +90,7 @@ void my_sem_open (sem_t ** semaphore, char* semaphoreName)
 
 void shmCleanup (char* shmName)
 {
-    int     rtnval;
+    int rtnval;
 
     rtnval = shm_unlink (shmName);
     if (rtnval != 0)
@@ -101,7 +101,7 @@ void shmCleanup (char* shmName)
 
 void semCleanup (char* semaphoreName)
 {
-    int     rtnval;
+    int rtnval;
 
     rtnval = sem_unlink (semaphoreName);
     if (rtnval != 0)
