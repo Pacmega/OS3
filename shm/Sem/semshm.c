@@ -34,7 +34,6 @@ char * my_shm_create (int size, char* shmName)
     {
         perror ("ERROR: mmap() failed");
     }
-    printf ("mmap() returned %p\n", shm_addr);
 
     return (shm_addr);
 }
@@ -58,7 +57,6 @@ char * my_shm_open (char* shmName)
     {
         perror ("ERROR: mmap() failed");
     }
-    printf ("mmap() returned %p\n", shm_addr);
 
     return (shm_addr);
 }
@@ -84,8 +82,6 @@ void my_sem_open (sem_t ** semaphore, char* semaphoreName)
             perror("ERROR: semaphore already exists");
         }
     }
-
-    printf("sem_open() returned %p\n", *semaphore);
 }
 
 void shmCleanup (char* shmName)

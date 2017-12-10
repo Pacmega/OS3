@@ -55,10 +55,12 @@ int main(void)
     int         numberStructSize = sizeof(number);
     int         numberArraySize = NUMBERARRAYLENGTH * numberStructSize;
 
-    // Names for both shared memory and the semaphore are set in semshm.c
-    MTstruct.sharedMem = my_shm_open(memoryName);           // Open the shared memory and save the address
-    my_sem_open(&MTstruct.itemsFilled, itemsFilledSemName); // Open the semaphore to count how many items are available
-    my_sem_open(&MTstruct.spaceLeft, spaceLeftSemName);     // Open the semaphore to count how much space is left to write to
+    // We don't need to check if any of these already exist, that is not actually possible.
+    // When the program is first run, they logically do not exist yet so we create them.
+    // When the program ends, it also removes the shared memory and semaphores from the disk. This means they need to be created again.
+    MTstruct.sharedMem = my_shm_create(numberArraySize, memoryName);  // Create the shared memory and save the address
+    my_sem_open(&MTstruct.itemsFilled, itemsFilledSemName);           // Create the semaphore to count how many items are available
+    my_sem_open(&MTstruct.spaceLeft, spaceLeftSemName);               // Create the semaphore to count how much space is left to write to
 
     if (MTstruct.itemsFilled == SEM_FAILED)
     {
@@ -76,17 +78,10 @@ int main(void)
     }
     if (MTstruct.sharedMem == MAP_FAILED)
     {
-        // Attempt to create the SHM instead of opening it
+        printf("Critical error: unable to open or create shared memory.\n");
 
-        MTstruct.sharedMem = my_shm_create(numberArraySize, memoryName);
-
-        if (MTstruct.sharedMem == MAP_FAILED)
-        {
-            printf("Critical error: unable to open or create shared memory.\n");
-
-            // Unable to properly execute without shared memory, shut down.
-            return -1;
-        }
+        // Unable to properly execute without shared memory, shut down.
+        return -1;
     }
 
     // Set the semaphore that counts the amount of available items to the right value.
@@ -106,12 +101,12 @@ int main(void)
         }
     }
 
-    printf("\n\n----- PROGRAM STARTING READ AND WRITE THREADS -----\n\n");
+    printf("----- PROGRAM STARTING READ AND WRITE THREADS -----\n\n");
     
     printf("Starting the writing and reading threads.\n");
-    printf("To stop this process, press ctrl-C.\n");
+    printf("To stop this process, press ctrl-C.\n\n");
 
-    printf(  "\n---------------------------------------------------\n\n");
+    printf("---------------------------------------------------\n\n");
     sleep(5);
 
     // Create both threads
