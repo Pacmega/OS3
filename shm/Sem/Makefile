@@ -5,9 +5,9 @@ PROJECT_FINAL  = semaphores
 # -Werror
 CFLAGS = -O2 -Wall -lrt -pthread -o
 
-MAIN_SOURCE_A = ProcessA.c
-MAIN_SOURCE_B = ProcessB.c
-TEST_SOURCE_W = Wtesting.c
+MAIN_SOURCE_A = examples/ProcessA.c
+MAIN_SOURCE_B = examples/ProcessB.c
+TEST_SOURCE_W = testing/Wtesting.c
 PROJECT = SemaphoreReadWriteProgram.c semshm.c
 
 GCC = gcc
