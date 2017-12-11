@@ -10,13 +10,14 @@ CGI_SOURCE = code/cgi.c
 
 CC=gcc
 
-all: clean deamon cgi
+all: clean daemon cgi
 
 daemon: $(DAEMON_SOURCE)
-	$(GCC) $(DAEMON_SOURCE) $(CFLAGS) $(LIBRARIES) $(DAEMON_APP)
+	$(CC) $(DAEMON_SOURCE) $(LIBRARIES) $(CFLAGS) $(DAEMON_APP)
 
 cgi: $(CGI_SOURCE)
-	$(GCC) $(CGI_SOURCE) $(CFLAGS) $(LIBRARIES) $(CGI_APP)
+	$(CC) $(CGI_SOURCE) $(LIBRARIES) $(CFLAGS) $(CGI_APP)
 
 clean:
-	@rm -rf *.o
+	@rm -rf $(DAEMON_APP)
+	@rm -rf $(CGI_APP)
