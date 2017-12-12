@@ -2,6 +2,7 @@ PROJECT_NAME_A = semaphoresA
 PROJECT_NAME_B = semaphoresB
 PROJECT_NAME_TEST = semaphoresT
 PROJECT_FINAL  = semaphores
+PROJECT_FORK   = semaphoresF
 PROJECT_READ   = semaphoresR
 PROJECT_WRITE  = semaphoresW
 
@@ -11,6 +12,7 @@ MAIN_SOURCE_A = examples/ProcessA.c
 MAIN_SOURCE_B = examples/ProcessB.c
 TEST_SOURCE_W = testing/Wtesting.c
 PROJECT = SemaphoreReadWriteProgram.c semshm.c
+FORK = ForkaphoreReadWriteProgram.c semshm.c
 READ = SemaphoreReadProgram.c semshm.c
 WRITE = SemaphoreWriteProgram.c semshm.c
 
@@ -26,6 +28,9 @@ sourceB: $(MAIN_SOURCE_B)
 
 project: $(PROJECT) 
 	$(GCC) $(PROJECT) $(CFLAGS) $(PROJECT_FINAL)
+
+fork: $(FORK)
+	$(GCC) $(FORK) $(CFLAGS) $(PROJECT_FORK)
 
 test: $(TEST_SOURCE_W) 
 	$(GCC) $(TEST_SOURCE_W) $(CFLAGS) $(PROJECT_NAME_TEST)
@@ -43,5 +48,6 @@ clean:
 	@rm -rf $(PROJECT_NAME_B)
 	@rm -rf $(PROJECT_NAME_TEST)
 	@rm -rf $(PROJECT_FINAL)
+	@rm -rf $(PROJECT_FORK)
 	@rm -rf $(PROJECT_READ)
 	@rm -rf $(PROJECT_WRITE)

@@ -1,3 +1,7 @@
+// Massive thanks to https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem
+// for giving a proper explanation of how this could be done using just two semaphores,
+// since the powerpoint was unhelpful at best and confusing at worst.
+
 #include <stdio.h>      // Printing to the terminal
 #include <string.h>     // Strings
 #include <sys/types.h>  // Shared memory
@@ -7,8 +11,8 @@
 #include <semaphore.h>  // Semaphores
 #include <signal.h>     // For the keyboard interrupt
 #include <stdbool.h>    // Booleans
-#include <pthread.h>    // Threads
-#include <unistd.h>     // Sleep()
+#include <stdlib.h>     // Exit()
+#include <unistd.h>     // Fork & sleep()
 
 #include "structs.h"    // Data about the multithreading and number structs
 #include "semshm.h"     // Semaphore & shared memory management functions
@@ -18,21 +22,25 @@
 // This needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
 
+static void writing (multithreading MTstruct);
+static void reading (multithreading MTstruct);
 void safeExit (sem_t * semaphoreToTest);
 
 number createNr(int value, char* pronunciation);
 void createStructs(number numberArray[]);
 void  InterruptHandler(int sig);
-void cleanUp();
 
-int main(int argc, char const *argv[])
+int main(void)
 {
     // Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
     // Instead, the program starts closes the semaphore & shared memory.
     signal(SIGINT, InterruptHandler);
 
-    multithreading MTstruct;
+    // Create a place to store the process ID of the fork in advance
+    pid_t processID;
 
+    // Semaphore and Shared Memory
+    multithreading MTstruct;
     MTstruct.sharedMem = (char *) MAP_FAILED;
     MTstruct.itemsFilled = SEM_FAILED;
     MTstruct.spaceLeft = SEM_FAILED;
@@ -40,14 +48,6 @@ int main(int argc, char const *argv[])
     char * memoryName = "OSassSharedMem";
     char * itemsFilledSemName = "itemsFilled";
     char * spaceLeftSemName = "spaceLeft";
-
-    int rtnval;
-    int positionToWrite;
-    int positionInNrArray = 0; // Start at position 0 of the array.
-    number numberArray[NUMBERARRAYLENGTH];
-    createStructs(numberArray);
-
-    number* shm_number = (number *)MTstruct.sharedMem;
 
     // Other variables that are used throughout the program.
     int         numberStructSize = sizeof(number);
@@ -99,6 +99,59 @@ int main(int argc, char const *argv[])
         }
     }
 
+    printf("----- PROGRAM FORKING AND STARTING READ AND WRITE -----\n\n");
+    
+    printf("Creating another version of this process, and starting\nto read and write.\n");
+    printf("To stop both of these processes, press ctrl-C.\n\n");
+
+    printf("-------------------------------------------------------\n\n");
+    sleep(5);
+
+    // Create the fork
+    processID = fork();
+    if(processID < 0)
+    {
+        // This is an error situation.
+        perror("unable to fork process");
+        exit (1);
+    }
+    else if (processID == 0)
+    {
+        // This is the child process.
+        reading(MTstruct);
+
+        // When this point is reached, the child process should close its semaphores and shared memory.
+        // For both of these, this happens automatically when the process ends. This means that they only need
+        // to be unlinked, which is left up to the main process to do.
+    }
+    else
+    {
+        // processID > 0: this is the main process
+        writing(MTstruct);
+
+        // When this point is reached, the main process should shut down.
+        printf("Cleaning up shared memory and semaphores in main process.\n");
+        
+        shmCleanup(memoryName);
+        semCleanup(itemsFilledSemName);
+        semCleanup(spaceLeftSemName);
+    }
+
+    return 0;
+}
+
+// Functions for both threads
+
+static void writing (multithreading MTstruct)
+{
+    int rtnval;
+    int positionToWrite;
+    int positionInNrArray = 0; // Start at position 0 of the array.
+    number numberArray[NUMBERARRAYLENGTH];
+    createStructs(numberArray);
+
+    number* shm_number = (number*)MTstruct.sharedMem;
+
     while(!interruptDetected)
     {
         // Wait until there is a spot available in the buffer to write to.
@@ -144,17 +197,52 @@ int main(int argc, char const *argv[])
     safeExit(MTstruct.itemsFilled);
 
     printf("Writing thread reached end.\n");
+}
 
-    printf("Cleaning up shared memory and semaphores.\n");
-    shmCleanup(memoryName);
-    semCleanup(itemsFilledSemName);
-    semCleanup(spaceLeftSemName);
+static void reading (multithreading MTstruct)
+{
+    int rtnval;
+    int positionToRead;
+    number readNr;
 
-    return 0;
+    number* shm_number = (number*)MTstruct.sharedMem;
+
+    while(!interruptDetected)
+    {
+        rtnval = sem_wait(MTstruct.itemsFilled);
+        if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
+
+        // Get the position where there is space to write.
+        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToRead);
+        if(rtnval != 0)
+        {
+            perror("ERROR: sem_getvalue() failed");
+            break;
+        }
+
+        readNr = shm_number[positionToRead];
+        
+        rtnval = sem_post(MTstruct.spaceLeft);
+        if(rtnval != 0)
+        {
+            perror("ERROR: sem_post() failed");
+            break;
+        }
+
+        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+    }
+
+    // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
+    safeExit(MTstruct.spaceLeft);
+
+    printf("Reading thread reached end.\n");
 }
 
 // Check if the passed semaphore is 0 and if so post to it, to avoid deadlocks when one of the threads exits first.
-
 void safeExit (sem_t * semaphoreToTest)
 {
     int semaphoreValue;
