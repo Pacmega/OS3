@@ -1,17 +1,16 @@
 #ifndef _USB_H_
 #define _USB_H_
 
-// 128  64  32  16  8  4  2  1
-//  7    6   5   4  3  2  1  0
-
+	// Should have the same functionality as the Arduino _BV macro.
 	#define _BV(x) (1 << x)
 
-	#define messageType        0
-	#define packetSize         1
+	#define messageType        0		// Position in the input report
+	#define packetSize         1		// Position in the input report
 
 	// Group 1
-	#define inputGroup1        2
+	#define inputGroup1        2		// Position in the input report
 
+	// Bit location within the group
 	#define rightStick         7
 	#define leftStick          6
 	#define backButton         5
@@ -22,6 +21,7 @@
 	#define dpadDown           1
 	#define dpadUp 		       0
 
+	// Values to check against after selecting the one bit from the input report
 	#define rightStickPressed  128
 	#define leftStickPressed   64
 	#define backButtonPressed  32
@@ -33,8 +33,9 @@
 	#define dpadUpPressed      1
 
 	// Group 2
-	#define inputGroup2        3
+	#define inputGroup2        3		// Position in the input report
 
+	// Bit location within the group
 	#define buttonY            7
 	#define buttonX            6
 	#define buttonB            5
@@ -44,9 +45,7 @@
 	#define rightShoulder      1
 	#define leftShoulder       0
 
-	// No bit shifting values for the triggers, they have an
-	// entire byte dedicated to them.
-
+	// Values to check against after selecting the one bit from the input report
 	#define buttonYPressed        128
 	#define buttonXPressed        64
 	#define buttonBPressed        32
@@ -57,8 +56,11 @@
 	#define leftShoulderPressed   1
 
 	// Triggers
-	#define leftTriggerPressed    4
-	#define rightTriggerPressed   5
+	#define leftTrigger           4		// Position in the input report
+	#define rightTrigger          5		// Position in the input report
+
+	// No other values need to be defined for the triggers,
+	// they have an entire byte dedicated to them.
 
 	// LED modes
 	#define allLEDsOff            0x00
