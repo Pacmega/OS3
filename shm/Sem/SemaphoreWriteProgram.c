@@ -1,7 +1,3 @@
-// Massive thanks to https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem
-// for giving a proper explanation of how this could be done using just two semaphores,
-// since the powerpoint was unhelpful at best and confusing at worst.
-
 #include <stdio.h>      // Printing to the terminal
 #include <string.h>     // Strings
 #include <sys/types.h>  // Shared memory
@@ -22,8 +18,6 @@
 // This needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
 
-static void * writingThread (void * arg);
-static void * readingThread (void * arg);
 void safeExit (sem_t * semaphoreToTest);
 
 number createNr(int value, char* pronunciation);
@@ -31,18 +25,14 @@ void createStructs(number numberArray[]);
 void  InterruptHandler(int sig);
 void cleanUp();
 
-int main(void)
+int main(int argc, char const *argv[])
 {
     // Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
     // Instead, the program starts closes the semaphore & shared memory.
     signal(SIGINT, InterruptHandler);
 
-    // Separate threads for reading and writing
-    pthread_t   writeThread;
-    pthread_t   readThread;
-
-    // Semaphore and Shared Memory
     multithreading MTstruct;
+
     MTstruct.sharedMem = (char *) MAP_FAILED;
     MTstruct.itemsFilled = SEM_FAILED;
     MTstruct.spaceLeft = SEM_FAILED;
@@ -50,6 +40,14 @@ int main(void)
     char * memoryName = "OSassSharedMem";
     char * itemsFilledSemName = "itemsFilled";
     char * spaceLeftSemName = "spaceLeft";
+
+    int rtnval;
+    int positionToWrite;
+    int positionInNrArray = 0; // Start at position 0 of the array.
+    number numberArray[NUMBERARRAYLENGTH];
+    createStructs(numberArray);
+
+    number* shm_number = (number *)MTstruct.sharedMem;
 
     // Other variables that are used throughout the program.
     int         numberStructSize = sizeof(number);
@@ -101,58 +99,10 @@ int main(void)
         }
     }
 
-    printf("----- PROGRAM STARTING READ AND WRITE THREADS -----\n\n");
-    
-    printf("Starting the writing and reading threads.\n");
-    printf("To stop this process, press ctrl-C.\n\n");
-
-    printf("---------------------------------------------------\n\n");
-    sleep(5);
-
-    // Create both threads
-    if (pthread_create (&writeThread, NULL, writingThread, &MTstruct) != 0)
-    {
-        perror ("writing thread");
-    }
-    if (pthread_create (&readThread, NULL, readingThread, &MTstruct) != 0)
-    {
-        perror ("reading thread");
-    }
-
-    // Main does nothing except wait until the threads are joined again.
-    // This is done by the interrupt that was set up earlier flipping a boolean that
-    // tells both threads to shut down when true.
-
-    (void) pthread_join(writeThread, NULL);
-    (void) pthread_join(readThread, NULL);
-    
-    printf("Cleaning up shared memory and semaphores.\n");
-    shmCleanup(memoryName);
-    semCleanup(itemsFilledSemName);
-    semCleanup(spaceLeftSemName);
-
-    return 0;
-}
-
-// Code for both threads
-
-static void * writingThread (void * arg)
-{
-    // Convert the given argument to a Multithreading pointer
-    multithreading * MTstruct = (multithreading *) arg;
-
-    int rtnval;
-    int positionToWrite;
-    int positionInNrArray = 0; // Start at position 0 of the array.
-    number numberArray[NUMBERARRAYLENGTH];
-    createStructs(numberArray);
-
-    number* shm_number = (number*)MTstruct->sharedMem;
-
     while(!interruptDetected)
     {
         // Wait until there is a spot available in the buffer to write to.
-        rtnval = sem_wait(MTstruct->spaceLeft);
+        rtnval = sem_wait(MTstruct.spaceLeft);
         if(rtnval != 0)
         {
             perror("ERROR: sem_wait() failed");
@@ -160,7 +110,7 @@ static void * writingThread (void * arg)
         }
 
         // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct->itemsFilled, &positionToWrite);
+        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToWrite);
         if(rtnval != 0)
         {
             perror("ERROR: sem_getvalue() failed");
@@ -170,7 +120,7 @@ static void * writingThread (void * arg)
         shm_number[positionToWrite] = numberArray[positionInNrArray];
 
         // Post that there is an item that could be read by the other thread.
-        rtnval = sem_post(MTstruct->itemsFilled);
+        rtnval = sem_post(MTstruct.itemsFilled);
         if(rtnval != 0)
         {
             perror("ERROR: sem_post() failed");
@@ -191,60 +141,20 @@ static void * writingThread (void * arg)
     }
 
     // Check if the itemsFilled semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct->itemsFilled);
+    safeExit(MTstruct.itemsFilled);
 
     printf("Writing thread reached end.\n");
-    return (NULL);
-}
 
-void * readingThread (void * arg)
-{
-    // Convert the given argument back to a Multithreading struct
-    multithreading * MTstruct = (multithreading *) arg;
+    printf("Cleaning up shared memory and semaphores.\n");
+    shmCleanup(memoryName);
+    semCleanup(itemsFilledSemName);
+    semCleanup(spaceLeftSemName);
 
-    int rtnval;
-    int positionToRead;
-    number readNr;
-
-    number* shm_number = (number*)MTstruct->sharedMem;
-
-    while(!interruptDetected)
-    {
-        rtnval = sem_wait(MTstruct->itemsFilled);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_wait() failed");
-            break;
-        }
-
-        // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct->itemsFilled, &positionToRead);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_getvalue() failed");
-            break;
-        }
-
-        readNr = shm_number[positionToRead];
-        
-        rtnval = sem_post(MTstruct->spaceLeft);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
-
-        printf("%d - %s\n", readNr.value, readNr.pronunciation);
-    }
-
-    // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct->spaceLeft);
-
-    printf("Reading thread reached end.\n");
-    return (NULL);
+    return 0;
 }
 
 // Check if the passed semaphore is 0 and if so post to it, to avoid deadlocks when one of the threads exits first.
+
 void safeExit (sem_t * semaphoreToTest)
 {
     int semaphoreValue;

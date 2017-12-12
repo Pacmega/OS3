@@ -2,13 +2,17 @@ PROJECT_NAME_A = semaphoresA
 PROJECT_NAME_B = semaphoresB
 PROJECT_NAME_TEST = semaphoresT
 PROJECT_FINAL  = semaphores
-# -Werror
-CFLAGS = -O2 -Wall -lrt -pthread -o
+PROJECT_READ   = semaphoresR
+PROJECT_WRITE  = semaphoresW
+
+CFLAGS = -O2 -Wall -Werror -lrt -pthread -o
 
 MAIN_SOURCE_A = examples/ProcessA.c
 MAIN_SOURCE_B = examples/ProcessB.c
 TEST_SOURCE_W = testing/Wtesting.c
 PROJECT = SemaphoreReadWriteProgram.c semshm.c
+READ = SemaphoreReadProgram.c semshm.c
+WRITE = SemaphoreWriteProgram.c semshm.c
 
 GCC = gcc
 
@@ -26,8 +30,18 @@ project: $(PROJECT)
 test: $(TEST_SOURCE_W) 
 	$(GCC) $(TEST_SOURCE_W) $(CFLAGS) $(PROJECT_NAME_TEST)
 
+rw: read write
+
+read: $(READ)
+	$(GCC) $(READ) $(CFLAGS) $(PROJECT_READ)
+
+write: $(WRITE)
+	$(GCC) $(WRITE) $(CFLAGS) $(PROJECT_WRITE)
+
 clean:
 	@rm -rf $(PROJECT_NAME_A)
 	@rm -rf $(PROJECT_NAME_B)
 	@rm -rf $(PROJECT_NAME_TEST)
 	@rm -rf $(PROJECT_FINAL)
+	@rm -rf $(PROJECT_READ)
+	@rm -rf $(PROJECT_WRITE)
