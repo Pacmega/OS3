@@ -8,7 +8,7 @@
 #include <sys/fcntl.h>
 #include <semaphore.h>
 
-#include "number.h"
+#include "../structs.h"
 
 #define NUMBERARRAYLENGTH 9 
 

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "number.h"
+#include "../structs.h"
 
 number createNr(int value, char* pronunciation)
 {
