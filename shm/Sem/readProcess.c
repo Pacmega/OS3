@@ -97,6 +97,10 @@ int main(void)
 
     reading(MTstruct);
 
+    shmCleanup(memoryName);
+    semCleanup(itemsFilledSemName);
+    semCleanup(spaceLeftSemName);
+
     return 0;
 }
 
@@ -104,9 +108,9 @@ void reading (multithreading MTstruct)
 {
     int rtnval;
     int positionToRead;
-    // number readNr;
+    number readNr;
 
-    // number* shm_number = (number*)MTstruct.sharedMem;
+    number* shm_number = (number*)MTstruct.sharedMem;
 
     while(!interruptDetected)
     {
@@ -125,8 +129,8 @@ void reading (multithreading MTstruct)
             break;
         }
 
-        // readNr = shm_number[positionToRead];
-        printf("read\n");
+        readNr = shm_number[positionToRead];
+        // printf("read\n");
         
         rtnval = sem_post(MTstruct.spaceLeft);
         if(rtnval != 0)
@@ -135,6 +139,7 @@ void reading (multithreading MTstruct)
             break;
         }
 
+        printf("Number %d\n", readNr.value);
         // printf("%d - %s\n", readNr.value, readNr.pronunciation);
     }
 

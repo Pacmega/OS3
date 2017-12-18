@@ -96,6 +96,10 @@ int main(void)
     }
 
     writing(MTstruct);
+    
+    shmCleanup(memoryName);
+    semCleanup(itemsFilledSemName);
+    semCleanup(spaceLeftSemName);
 
     return 0;
 }
