@@ -6,9 +6,13 @@
 
 typedef struct
 {
-	int 	value;
-	char* 	pronunciation;
-} number;
+    unsigned char group1;       // D-Pad, start and back buttons and stick presses
+    unsigned char group2;       // Shoulder buttons, A/B/X/Y and Xbox logo
+    unsigned char leftTrigger;  // Left trigger
+    unsigned char rightTrigger; // Right trigger
+    int           leftStick;    // Left stick
+    int           rightStick;   // Right stick
+} inputStruct;
 
 typedef struct
 {
