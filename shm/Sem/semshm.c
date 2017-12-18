@@ -20,19 +20,19 @@ char * my_shm_create (int size, char* shmName)
     shm_filedescriptor = shm_open (shmName, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (shm_filedescriptor == -1)
     {
-        perror ("ERROR: shm_open() failed in my_shm_create");
+        // perror ("ERROR: shm_open() failed in my_shm_create");
     }
                 
     rtnval = ftruncate (shm_filedescriptor, size);
     if (rtnval != 0)
     {
-        perror ("ERROR: ftruncate() failed");
+        // perror ("ERROR: ftruncate() failed");
     }
                 
     shm_addr = (char *) mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_filedescriptor, 0);
     if (shm_addr == MAP_FAILED)
     {
-        perror ("ERROR: mmap() failed");
+        // perror ("ERROR: mmap() failed");
     }
 
     return (shm_addr);
