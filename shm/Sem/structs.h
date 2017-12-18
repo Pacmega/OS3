@@ -4,10 +4,12 @@
 #include <sys/stat.h>
 #include <sys/fcntl.h>
 
+#define PRONUNCIATIONLENGTH 7
+
 typedef struct
 {
 	int 	value;
-	char* 	pronunciation;
+	char 	pronunciation[PRONUNCIATIONLENGTH];
 } number;
 
 typedef struct

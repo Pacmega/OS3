@@ -96,7 +96,7 @@ int main(void)
     }
 
     writing(MTstruct);
-    
+
     shmCleanup(memoryName);
     semCleanup(itemsFilledSemName);
     semCleanup(spaceLeftSemName);
@@ -187,7 +187,11 @@ number createNr(int value, char* pronunciation)
 {
     number newNr;
     newNr.value = value;
-    newNr.pronunciation = pronunciation;
+    int i = 0;
+    for(; i < PRONUNCIATIONLENGTH; i++)
+    {
+        newNr.pronunciation[i] = pronunciation[i];
+    }
 
     return newNr;
 }

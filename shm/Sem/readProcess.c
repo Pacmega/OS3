@@ -139,7 +139,22 @@ void reading (multithreading MTstruct)
             break;
         }
 
-        printf("Number %d\n", readNr.value);
+        printf("Number %d - ", readNr.value);
+
+        int i = 0;
+        for (; i < PRONUNCIATIONLENGTH; i++)
+        {
+            char gelezenKarakter = readNr.pronunciation[i];
+            if (gelezenKarakter == '\0')
+            {
+                break;
+            }
+            else
+            {
+                printf("%c", gelezenKarakter);
+            }
+        }
+        printf("\n");
         // printf("%d - %s\n", readNr.value, readNr.pronunciation);
     }
 
