@@ -17,9 +17,9 @@ typedef struct
 typedef struct
 {
 	char * 	sharedMem;
-	sem_t * itemsFilled;
-	sem_t * spaceLeft;
-} multithreading;
+	sem_t * /itemsToWrite;
+	sem_t * /itemsToRead;
+} semShm;
 
 typedef struct 
 {
