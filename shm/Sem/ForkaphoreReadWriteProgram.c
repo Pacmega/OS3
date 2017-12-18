@@ -237,7 +237,22 @@ static void reading (multithreading MTstruct)
             break;
         }
 
-        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+        printf("Number %d - ", readNr.value);
+
+        int i = 0;
+        for (; i < PRONUNCIATIONLENGTH; i++)
+        {
+            char gelezenKarakter = readNr.pronunciation[i];
+            if (gelezenKarakter == '\0')
+            {
+                break;
+            }
+            else
+            {
+                printf("%c", gelezenKarakter);
+            }
+        }
+        printf("\n");
     }
 
     // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
@@ -274,7 +289,11 @@ number createNr(int value, char* pronunciation)
 {
     number newNr;
     newNr.value = value;
-    newNr.pronunciation = pronunciation;
+    int i = 0;
+    for(; i < PRONUNCIATIONLENGTH; i++)
+    {
+        newNr.pronunciation[i] = pronunciation[i];
+    }
 
     return newNr;
 }

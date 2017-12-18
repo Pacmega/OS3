@@ -155,7 +155,6 @@ void reading (multithreading MTstruct)
             }
         }
         printf("\n");
-        // printf("%d - %s\n", readNr.value, readNr.pronunciation);
     }
 
     // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.

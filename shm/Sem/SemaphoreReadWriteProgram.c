@@ -78,10 +78,14 @@ int main(void)
     }
     if (MTstruct.sharedMem == MAP_FAILED)
     {
-        printf("Critical error: unable to open or create shared memory.\n");
+        MTstruct.sharedMem = my_shm_open(memoryName);
+        if (MTstruct.sharedMem == MAP_FAILED)
+        {
+            printf("Critical error: unable to open or create shared memory.\n");
 
-        // Unable to properly execute without shared memory, shut down.
-        return -1;
+            // Unable to properly execute without shared memory, shut down.
+            return -1;
+        }
     }
 
     // Set the semaphore that counts the amount of available items to the right value.
@@ -234,7 +238,22 @@ void * readingThread (void * arg)
             break;
         }
 
-        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+        printf("Number %d - ", readNr.value);
+
+        int i = 0;
+        for (; i < PRONUNCIATIONLENGTH; i++)
+        {
+            char gelezenKarakter = readNr.pronunciation[i];
+            if (gelezenKarakter == '\0')
+            {
+                break;
+            }
+            else
+            {
+                printf("%c", gelezenKarakter);
+            }
+        }
+        printf("\n");
     }
 
     // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
@@ -272,7 +291,11 @@ number createNr(int value, char* pronunciation)
 {
     number newNr;
     newNr.value = value;
-    newNr.pronunciation = pronunciation;
+    int i = 0;
+    for(; i < PRONUNCIATIONLENGTH; i++)
+    {
+        newNr.pronunciation[i] = pronunciation[i];
+    }
 
     return newNr;
 }
