@@ -1,7 +1,3 @@
-// Massive thanks to https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem
-// for giving a proper explanation of how this could be done using just two semaphores,
-// since the powerpoint was unhelpful at best and confusing at worst.
-
 #include <stdio.h>      // Printing to the terminal
 #include <string.h>     // Strings
 #include <sys/types.h>  // Shared memory
@@ -22,8 +18,7 @@
 // This needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
 
-static void writing (multithreading MTstruct);
-static void reading (multithreading MTstruct);
+void writing (multithreading MTstruct);
 void safeExit (sem_t * semaphoreToTest);
 
 number createNr(int value, char* pronunciation);
@@ -35,9 +30,6 @@ int main(void)
     // Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
     // Instead, the program starts closes the semaphore & shared memory.
     signal(SIGINT, InterruptHandler);
-
-    // Create a place to store the process ID of the fork in advance
-    pid_t processID;
 
     // Semaphore and Shared Memory
     multithreading MTstruct;
@@ -103,50 +95,12 @@ int main(void)
         }
     }
 
-    printf("----- PROGRAM FORKING AND STARTING READ AND WRITE -----\n\n");
-    
-    printf("Creating another version of this process, and starting\nto read and write.\n");
-    printf("To stop both of these processes, press ctrl-C.\n\n");
-
-    printf("-------------------------------------------------------\n\n");
-    sleep(5);
-
-    // Create the fork
-    processID = fork();
-    if(processID < 0)
-    {
-        // This is an error situation.
-        perror("unable to fork process");
-        exit (1);
-    }
-    else if (processID == 0)
-    {
-        // This is the child process.
-        reading(MTstruct);
-
-        // When this point is reached, the child process should close its semaphores and shared memory.
-        // For both of these, this happens automatically when the process ends. This means that they only need
-        // to be unlinked, which is left up to the main process to do.
-    }
-    else
-    {
-        // processID > 0: this is the main process
-        writing(MTstruct);
-
-        // When this point is reached, the main process should shut down.
-        printf("Cleaning up shared memory and semaphores in main process.\n");
-        
-        shmCleanup(memoryName);
-        semCleanup(itemsFilledSemName);
-        semCleanup(spaceLeftSemName);
-    }
+    writing(MTstruct);
 
     return 0;
 }
 
-// Functions for both threads
-
-static void writing (multithreading MTstruct)
+void writing (multithreading MTstruct)
 {
     int rtnval;
     int positionToWrite;
@@ -203,49 +157,6 @@ static void writing (multithreading MTstruct)
     printf("Writing thread reached end.\n");
 }
 
-static void reading (multithreading MTstruct)
-{
-    int rtnval;
-    int positionToRead;
-    number readNr;
-
-    number* shm_number = (number*)MTstruct.sharedMem;
-
-    while(!interruptDetected)
-    {
-        rtnval = sem_wait(MTstruct.itemsFilled);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_wait() failed");
-            break;
-        }
-
-        // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToRead);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_getvalue() failed");
-            break;
-        }
-
-        readNr = shm_number[positionToRead];
-        
-        rtnval = sem_post(MTstruct.spaceLeft);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
-
-        printf("%d - %s\n", readNr.value, readNr.pronunciation);
-    }
-
-    // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct.spaceLeft);
-
-    printf("Reading thread reached end.\n");
-}
-
 // Check if the passed semaphore is 0 and if so post to it, to avoid deadlocks when one of the threads exits first.
 void safeExit (sem_t * semaphoreToTest)
 {
@@ -267,8 +178,6 @@ void safeExit (sem_t * semaphoreToTest)
         }
     }
 }
-
-// All other functions
 
 number createNr(int value, char* pronunciation)
 {

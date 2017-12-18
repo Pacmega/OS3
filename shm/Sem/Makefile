@@ -13,8 +13,8 @@ MAIN_SOURCE_B = examples/ProcessB.c
 TEST_SOURCE_W = testing/Wtesting.c
 PROJECT = SemaphoreReadWriteProgram.c semshm.c
 FORK = ForkaphoreReadWriteProgram.c semshm.c
-READ = SemaphoreReadProgram.c semshm.c
-WRITE = SemaphoreWriteProgram.c semshm.c
+READ = readProcess.c semshm.c
+WRITE = writeProcess.c semshm.c
 
 GCC = gcc
 

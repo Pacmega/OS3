@@ -1,7 +1,3 @@
-// Massive thanks to https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem
-// for giving a proper explanation of how this could be done using just two semaphores,
-// since the powerpoint was unhelpful at best and confusing at worst.
-
 #include <stdio.h>      // Printing to the terminal
 #include <string.h>     // Strings
 #include <sys/types.h>  // Shared memory
@@ -22,8 +18,7 @@
 // This needs to be global for the interrupt handler to be able to change it.
 bool interruptDetected = false;
 
-static void writing (multithreading MTstruct);
-static void reading (multithreading MTstruct);
+void reading (multithreading MTstruct);
 void safeExit (sem_t * semaphoreToTest);
 
 number createNr(int value, char* pronunciation);
@@ -35,9 +30,6 @@ int main(void)
     // Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
     // Instead, the program starts closes the semaphore & shared memory.
     signal(SIGINT, InterruptHandler);
-
-    // Create a place to store the process ID of the fork in advance
-    pid_t processID;
 
     // Semaphore and Shared Memory
     multithreading MTstruct;
@@ -103,113 +95,18 @@ int main(void)
         }
     }
 
-    printf("----- PROGRAM FORKING AND STARTING READ AND WRITE -----\n\n");
-    
-    printf("Creating another version of this process, and starting\nto read and write.\n");
-    printf("To stop both of these processes, press ctrl-C.\n\n");
-
-    printf("-------------------------------------------------------\n\n");
-    sleep(5);
-
-    // Create the fork
-    processID = fork();
-    if(processID < 0)
-    {
-        // This is an error situation.
-        perror("unable to fork process");
-        exit (1);
-    }
-    else if (processID == 0)
-    {
-        // This is the child process.
-        reading(MTstruct);
-
-        // When this point is reached, the child process should close its semaphores and shared memory.
-        // For both of these, this happens automatically when the process ends. This means that they only need
-        // to be unlinked, which is left up to the main process to do.
-    }
-    else
-    {
-        // processID > 0: this is the main process
-        writing(MTstruct);
-
-        // When this point is reached, the main process should shut down.
-        printf("Cleaning up shared memory and semaphores in main process.\n");
-        
-        shmCleanup(memoryName);
-        semCleanup(itemsFilledSemName);
-        semCleanup(spaceLeftSemName);
-    }
+    reading(MTstruct);
 
     return 0;
 }
 
-// Functions for both threads
-
-static void writing (multithreading MTstruct)
-{
-    int rtnval;
-    int positionToWrite;
-    int positionInNrArray = 0; // Start at position 0 of the array.
-    number numberArray[NUMBERARRAYLENGTH];
-    createStructs(numberArray);
-
-    number* shm_number = (number*)MTstruct.sharedMem;
-
-    while(!interruptDetected)
-    {
-        // Wait until there is a spot available in the buffer to write to.
-        rtnval = sem_wait(MTstruct.spaceLeft);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_wait() failed");
-            break;
-        }
-
-        // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToWrite);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_getvalue() failed");
-            break;
-        }
-
-        shm_number[positionToWrite] = numberArray[positionInNrArray];
-
-        // Post that there is an item that could be read by the other thread.
-        rtnval = sem_post(MTstruct.itemsFilled);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
-
-        // Change the integer that determines which number is written to the buffer.
-        // The -1 is required because the array started at 0 but has a length of NUMBERARRAYLENGTH items,
-        // which means the last entry in the array is at NUMBERARRAYLENGTH - 1.
-        if(positionInNrArray < NUMBERARRAYLENGTH - 1)
-        {
-            positionInNrArray++;
-        }
-        else
-        {
-            positionInNrArray = 0;
-        }
-    }
-
-    // Check if the itemsFilled semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct.itemsFilled);
-
-    printf("Writing thread reached end.\n");
-}
-
-static void reading (multithreading MTstruct)
+void reading (multithreading MTstruct)
 {
     int rtnval;
     int positionToRead;
-    number readNr;
+    // number readNr;
 
-    number* shm_number = (number*)MTstruct.sharedMem;
+    // number* shm_number = (number*)MTstruct.sharedMem;
 
     while(!interruptDetected)
     {
@@ -228,7 +125,8 @@ static void reading (multithreading MTstruct)
             break;
         }
 
-        readNr = shm_number[positionToRead];
+        // readNr = shm_number[positionToRead];
+        printf("read\n");
         
         rtnval = sem_post(MTstruct.spaceLeft);
         if(rtnval != 0)
@@ -237,7 +135,7 @@ static void reading (multithreading MTstruct)
             break;
         }
 
-        printf("%d - %s\n", readNr.value, readNr.pronunciation);
+        // printf("%d - %s\n", readNr.value, readNr.pronunciation);
     }
 
     // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
@@ -266,31 +164,6 @@ void safeExit (sem_t * semaphoreToTest)
             perror("ERROR: sem_post() failed");
         }
     }
-}
-
-// All other functions
-
-number createNr(int value, char* pronunciation)
-{
-    number newNr;
-    newNr.value = value;
-    newNr.pronunciation = pronunciation;
-
-    return newNr;
-}
-
-void createStructs(number numberArray[])
-{
-    // This function only works specifically with an array of 9 or more numbers.
-    numberArray[0] = createNr(1, "Ace");
-    numberArray[1] = createNr(2, "Deuce");
-    numberArray[2] = createNr(3, "Trey");
-    numberArray[3] = createNr(4, "Cater");
-    numberArray[4] = createNr(5, "Cinque");
-    numberArray[5] = createNr(6, "Sice");
-    numberArray[6] = createNr(7, "Seven");
-    numberArray[7] = createNr(8, "Eight");
-    numberArray[8] = createNr(9, "Nine");
 }
 
 void  InterruptHandler(int sig)
