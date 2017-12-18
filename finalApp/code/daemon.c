@@ -63,6 +63,8 @@ int main(int argc, char const *argv[])
 		fprintf(stderr, "Failed to open device\n");
 		return (1);
 	}
+
+	inputStruct structToSend;
 	
 	error = 0;
 

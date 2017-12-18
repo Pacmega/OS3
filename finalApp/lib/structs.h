@@ -14,13 +14,6 @@ typedef struct
     int           rightStick;   // Right stick
 } inputStruct;
 
-typedef struct
-{
-	char * 	sharedMem;
-	sem_t * /itemsToWrite;
-	sem_t * /itemsToRead;
-} semShm;
-
 typedef struct 
 {
 	int 	leftRumbler;
