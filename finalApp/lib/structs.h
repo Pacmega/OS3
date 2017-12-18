@@ -16,3 +16,10 @@ typedef struct
 	sem_t * itemsFilled;
 	sem_t * spaceLeft;
 } multithreading;
+
+typedef struct 
+{
+	int 	leftRumbler;
+	int		rightRumbler;
+	int		lightFunction;
+}x360outputs;
