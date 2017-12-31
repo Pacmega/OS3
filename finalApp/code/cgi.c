@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <signal.h>     // For the keyboard interrupt
 #include <stdbool.h>    // Booleans
+#include <stdlib.h>
 
 #include "../lib/structs.h" // structs that we will use to communicate to daemon
 #include "../lib/semshm.h"
