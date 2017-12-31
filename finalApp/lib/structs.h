@@ -23,3 +23,8 @@ typedef struct
 	int		rightRumbler;
 	int		lightFunction;
 }x360outputs;
+
+typedef struct
+{
+	
+}x360inputs;

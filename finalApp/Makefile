@@ -1,9 +1,9 @@
 DAEMON_APP = deamonApp
 CGI_APP = cgiApp
 
-CFLAGS = -O2 -Wall -Werror -lrt -pthread -o
+CFLAGS = -O2 -Wall -Werror -lrt -lm -pthread -o
 
-LIBRARIES = $(wildcard lib/*.c)
+LIBRARIES = $(wildcard lib/*.h)
 DAEMON_SOURCE = code/daemon.c
 CGI_SOURCE = code/cgi.c
 # Not quite sure if that's how CGI is actually going to work
