@@ -146,7 +146,7 @@ void handleInput()
 				printf("Error sending message to queue.\n");
 		}
 
-		rtnval = mq_unlink(mq_fd);
+		rtnval = mq_unlink(mq_name);
 
 		if (rtnval == -1)
 			printf("Error unlinking from the queue.\n");	
@@ -157,9 +157,10 @@ void reading (multithreading MTstruct)
 {
     int rtnval;
     int positionToRead;
-    x360inputs readNr;
+    // x360inputs readNr;
 
-    x360inputs* shm_inputs = (x360inputs*)MTstruct.sharedMem;
+    // TODO: make use of this
+    // x360inputs* shm_inputs = (x360inputs*)MTstruct.sharedMem;
 
     while(!interruptDetected)
     {
@@ -178,8 +179,8 @@ void reading (multithreading MTstruct)
             break;
         }
 
-        x360inputs readInput = shm_inputs[positionToRead];
-        // printf("read\n");
+        // TODO: actually use the read values
+        // x360inputs readInput = shm_inputs[positionToRead];
         
         rtnval = sem_post(MTstruct.spaceLeft);
         if(rtnval != 0)
@@ -234,13 +235,13 @@ void outputsForm()
 	printf("<form action='../mult.cgi'>");
 		printf("<div>");
 			printf("<label>");
-				printf("Left rumbler intensity (0 to 100%)");
+				printf("Left rumbler intensity (0 to 100%%)");
 				printf("<input name='lr' size='3'>");
 			printf("</label>");
 		printf("</div>");
 		printf("<div>");
 			printf("<label>");
-				printf("Right rumbler intensity (0 to 100%)");
+				printf("Right rumbler intensity (0 to 100%%)");
 				printf("<input name='rr' size='3'>");
 			printf("</label>");
 		printf("</div>");

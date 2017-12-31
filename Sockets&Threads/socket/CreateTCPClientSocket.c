@@ -6,6 +6,8 @@
 
 int CreateTCPClientSocket (const char * servIP, unsigned short port)
 {
+    const char * bleh = "127.0.0.1";
+
     int                 sock;         /* Socket descriptor */
     struct sockaddr_in  echoServAddr; /* Echo server address */
 
@@ -20,7 +22,7 @@ int CreateTCPClientSocket (const char * servIP, unsigned short port)
     /* Construct the server address structure */
     memset(&echoServAddr, 0, sizeof(echoServAddr));     /* Zero out structure */
     echoServAddr.sin_family      = AF_INET;             /* Internet address family */
-    echoServAddr.sin_addr.s_addr = inet_addr(servIP);   /* Server IP address */
+    echoServAddr.sin_addr.s_addr = inet_addr(bleh);   /* Server IP address */
     echoServAddr.sin_port        = htons(port);         /* Server port */
 
     /* Establish the connection to the echo server */
