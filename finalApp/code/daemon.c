@@ -25,8 +25,17 @@
 #include "../lib/xboxUSB.h"    // Xbox 360 USB information and _BV() macro
 #include "../lib/defines.h"		   // defined names for semaphores, shared memory & message queue
 
+typedef struct
+{
+	char * 	sharedMemory;
+	sem_t * itemAvailableSem;
+	sem_t * itemRequestedSem;
+	libusb_device_handle * deviceHandle;
+} multithreading;
+
 unsigned char inputReport[14] = {0};
 
+// TODO: uncomment this
 // static void createDaemon()
 // {
 // 	pid_t pid;
@@ -112,6 +121,7 @@ void printReport()
 	printf("%d\n", inputReport[12]);
 	printf("%d\n", inputReport[13]);
 }
+
 void * settingChanger (void* arg)
 {
 	printf("Ik ben een thread.\n");
@@ -159,12 +169,11 @@ int main(int argc, char const *argv[])
 	// createDaemon();
 
 	mqd_t messageQueue = -1;
-	// TODO: uncomment this
-    // libusb_device_handle *deviceHandle;
 	inputStruct structToSend;
-	sem_t* itemAvailableSem = my_sem_open(itemAvailableSemName); // Create the semaphore to publish if an item was already provided by this program.
-	sem_t* itemRequestedSem = my_sem_open(itemRequestSemName);   // Create the semaphore to know if an item was requested by the user
-	char*  sharedMemory     = (char *) MAP_FAILED;
+	multithreading mtStruct;
+	mtStruct.itemAvailableSem = my_sem_open(itemAvailableSemName); // Create the semaphore to publish if an item was already provided by this program.
+	mtStruct.itemRequestedSem = my_sem_open(itemRequestSemName);   // Create the semaphore to know if an item was requested by the user
+	mtStruct.sharedMemory     = (char *) MAP_FAILED;
 	pthread_t changeSettingsThread;
 	pthread_t sendStatusThread;
 
@@ -172,10 +181,10 @@ int main(int argc, char const *argv[])
 
 	libusb_init(NULL);
 	// TODO: uncomment this
-	// deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
+	// mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
 
 	// TODO: uncomment this
-	// if (deviceHandle == NULL)
+	// if (mtStruct.deviceHandle == NULL)
 	// {
 	// 	fprintf(stderr, "Failed to open device\n");
 	// 	return (1);
@@ -192,14 +201,14 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	if (itemAvailableSem == SEM_FAILED)
+	if (mtStruct.itemAvailableSem == SEM_FAILED)
     {
         printf("Critical error: unable to open itemsFilled semaphore.");
 
         // Unable to properly execute without semaphore, shut down.
         return -1;
     }
-    if (itemRequestedSem == SEM_FAILED)
+    if (mtStruct.itemRequestedSem == SEM_FAILED)
     {
         printf("Critical error: unable to open spaceLeft semaphore.");
 
@@ -207,10 +216,10 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    if (sharedMemory == MAP_FAILED)
+    if (mtStruct.sharedMemory == MAP_FAILED)
     {
-        sharedMemory = my_shm_open(structSize, sharedMemName);
-        if (sharedMemory == MAP_FAILED)
+        mtStruct.sharedMemory = my_shm_open(structSize, sharedMemName);
+        if (mtStruct.sharedMemory == MAP_FAILED)
         {
             printf("Critical error: unable to open or create shared memory.\n");
 
@@ -223,7 +232,7 @@ int main(int argc, char const *argv[])
     {
         perror ("controller setting changing thread");
     }
-    if (pthread_create (&sendStatusThread, NULL, inputReporter, NULL) != 0)
+    if (pthread_create (&sendStatusThread, NULL, inputReporter, &mtStruct) != 0)
     {
         perror ("status submitting thread");
     }
