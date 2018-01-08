@@ -41,8 +41,8 @@ int main(void)
     MTstruct.itemsFilled = SEM_FAILED;
     MTstruct.spaceLeft = SEM_FAILED;
 
-    char* memoryName = "inputStorage";
-    char* itemsFilledSemName = "itemsFilled";
+    char* memoryName = "/inputStorage";
+    char* itemsFilledSemName = "/itemsFilled";
     char* spaceLeftSemName = "spaceLeft";
 
     // Other variables that are used throughout the program.

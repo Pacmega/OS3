@@ -20,7 +20,7 @@ char * my_shm_create (int size, char* shmName)
     shm_filedescriptor = shm_open (shmName, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (shm_filedescriptor == -1)
     {
-        perror ("ERROR: shm_open() failed in my_shm_create");
+        perror ("ERROR: unable to create shared memory");
     }
                 
     rtnval = ftruncate (shm_filedescriptor, size);
@@ -28,17 +28,11 @@ char * my_shm_create (int size, char* shmName)
     {
         perror ("ERROR: ftruncate() failed");
     }
-                
-    shm_addr = (char *) mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_filedescriptor, 0);
-    if (shm_addr == MAP_FAILED)
-    {
-        perror ("ERROR: mmap() failed");
-    }
 
     return (shm_addr);
 }
 
-char * my_shm_open (char* shmName)
+char * my_shm_open (int size, char* shmName)
 {
     int     size;
     char *  shm_addr;
@@ -47,7 +41,18 @@ char * my_shm_open (char* shmName)
     shm_filedescriptor = shm_open (shmName, O_RDWR, 0600);
     if (shm_filedescriptor == -1)
     {
-        perror ("ERROR: shm_open() failed");
+        // Unable to open. Try to create it instead!
+        printf("Unable to open shared memory. Attempting to create it now.\n");
+        shm_filedescriptor = my_shm_create(size, shmName);
+        if (shm_filedescriptor == -1)
+        {
+            perror ("ERROR: unable to open or create shared memory");
+            return NULL;
+        }
+        else
+        {
+            printf("New shared memory created.\n");
+        }
     }
                 
     size = lseek (shm_filedescriptor, 0, SEEK_END);
@@ -61,26 +66,30 @@ char * my_shm_open (char* shmName)
     return (shm_addr);
 }
 
-void my_sem_open (sem_t ** semaphore, char* semaphoreName)
+sem_t * my_sem_open (char* semaphoreName)
 {
-    if (*semaphore != SEM_FAILED)
-    {
-        printf ("ERROR: another semaphore already opened\n");
-        return;
-    }
+    sem_t * /semaphore;
 
-    *semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 1);
+    /semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 1);
 
-    if (*semaphore == SEM_FAILED)
+    if (/semaphore == SEM_FAILED)
     {
         // Semaphore exists, try to open it
-        *semaphore = sem_open(semaphoreName, 0);
+        /semaphore = sem_open(semaphoreName, 0);
 
-        if (*semaphore == SEM_FAILED)
+        if (/semaphore == SEM_FAILED)
         {
             // Something else is wrong
-            perror("ERROR: semaphore already exists");
+            perror("ERROR: semaphore already exists but can't be opened");
+            return NULL;
         }
+        // Else, opening the existing semaphore succeeded
+        return /semaphore;
+    }
+    else
+    {
+        // Creating the semaphore succeeded
+        return /semaphore;
     }
 }
 
