@@ -167,7 +167,7 @@ void * inputReporter (void* arg)
 	multithreading * mtStruct = (multithreading*) arg;
 	inputStruct structToSend;
 	int rtnval = 0;
-	// int transferred;
+	int transferred;
 
 	inputStruct* shm_inputStruct = (inputStruct*) mtStruct->sharedMemory;
 
@@ -181,12 +181,12 @@ void * inputReporter (void* arg)
         }
 
 		// TODO: uncomment this
-		// if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
-		// {
-		// 	fprintf(stderr, "Transfer failed: %d\n", rtnval);
-		// 	break;
-		// }
-		// else
+		if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
+		{
+			fprintf(stderr, "Transfer failed: %d\n", rtnval);
+			break;
+		}
+		else
 		{
 			printReport();
 			structToSend.group1Input = inputReport[inputGroup1];
@@ -237,14 +237,14 @@ int main(int argc, char const *argv[])
 
 	libusb_init(NULL);
 	// TODO: uncomment this
-	// mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
+	mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
 
 	// TODO: uncomment this
-	// if (mtStruct.deviceHandle == NULL)
-	// {
-	// 	fprintf(stderr, "Failed to open device\n");
-	// 	return (1);
-	// }
+	if (mtStruct.deviceHandle == NULL)
+	{
+		fprintf(stderr, "Failed to open device\n");
+		return (1);
+	}
 
 	mtStruct.messageQueue = mq_open (messageQueueName, O_RDONLY);
 	if (mtStruct.messageQueue == -1)

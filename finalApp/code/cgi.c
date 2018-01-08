@@ -234,14 +234,14 @@ int main(void)
 	int choice;
 
 	printf("<p>Choose a number:</p>\n");
-	printf("[0]		LEDs Blink\n"
-		"[1]		LEDs Spin\n"
-		"[2]		LEDs Off\n"
-		"[3]		Left Rumbler on\n"
-		"[4]		Right Rumbler on\n"
-		"[5]		Left Rumbler off\n"
-		"[6]		Right Rumbler off\n"
-		"[7]		Read Controller input");
+	printf("<p>[0]		LEDs Blink </p>"
+			"<p>[1]		LEDs Spin</p>"
+			"<p>[2]		LEDs Off</p>"
+			"<p>[3]		Left Rumbler on</p>"
+			"<p>[4]		Right Rumbler on</p>"
+			"<p>[5]		Left Rumbler off</p>"
+			"<p>[6]		Right Rumbler off</p>"
+			"<p>[7]		Read Controller input</p>");
 	
 	data = getenv("QUERY_STRING");
 	
