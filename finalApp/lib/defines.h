@@ -7,6 +7,4 @@
 #define mqName "/_mq_mq_" // TODO: a good name?
 
 #define deadzone 10
-
-#endif
 #endif
