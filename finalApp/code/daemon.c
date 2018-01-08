@@ -248,7 +248,6 @@ int main(int argc, char const *argv[])
 	int structSize = sizeof(inputStruct);
 
 	libusb_init(NULL);
-
 	mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
 
 	if (mtStruct.deviceHandle == NULL)

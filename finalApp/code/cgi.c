@@ -15,202 +15,75 @@
 
 #include "../lib/structs.h" // structs that we will use to communicate to daemon
 #include "../lib/semshm.h"
+#include "../lib/defines.h"
+#include "../lib/xboxUSB.h"
 
-#define MEMORYSIZE 5 // The size of the shared memory
-
-void handleInput();
-void reading (multithreading MTstruct);
-void header(char* mimeType);
-void startPage(char* title);
-void outputsForm();
+void printInput(inputStruct* input);
 void endPage();
-void safeExit (sem_t * semaphoreToTest);
-void  InterruptHandler(int sig);
+void startPage(char* title);
+void header(char* mimeType);
+void reading (char* memoryName, sem_t* writeSem, sem_t* readSem);
 
-bool interruptDetected = false;
 
-int main(void)
+void handleInput(int choice)
 {
-	// Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
-    // Instead, the program starts closing the semaphore & shared memory.
-    signal(SIGINT, InterruptHandler);
+	char mq_name[nameSize] = messageQueueName;
+	int rtnval = -1;
 
-    // Setting up the variables to make the semaphore
-    multithreading MTstruct;
-    MTstruct.sharedMem = (char *) MAP_FAILED;
-    MTstruct.itemsFilled = SEM_FAILED;
-    MTstruct.spaceLeft = SEM_FAILED;
+	mqd_t mq_fd = -1; 
 
-    char* memoryName = "inputStorage";
-    char* itemsFilledSemName = "itemsFilled";
-    char* spaceLeftSemName = "spaceLeft";
+	mq_fd = mq_open(mq_name, O_WRONLY);	// Try to open an existing MQ (Write only mode)
 
-    // Other variables that are used throughout the program.
-    int structSize = sizeof(x360inputs);
-    int arraySize = MEMORYSIZE * structSize;
-
-    MTstruct.sharedMem = my_shm_create(arraySize, memoryName);
-    my_sem_open(&MTstruct.itemsFilled, itemsFilledSemName);
-    my_sem_open(&MTstruct.spaceLeft, spaceLeftSemName);
-
-	// Starting to create the HTML:
-	header("text/html");
-	startPage("Controller Controller");
-
-	printf("<p>Fill this in to send output to the controller</p>\n");
-	
-	outputsForm();
-
-	printf("<p>If something went wrong with sending the output, It'll be shown below:</p>\n");
-
-	handleInput();
-
-	printf("<p>Here, the input of the controller is read and displayed below. You can stop getting data using CTRL+C</p>\n");
-	
-	if (MTstruct.itemsFilled == SEM_FAILED)
+	if (mq_fd != -1)	// If it exists
 	{
-		printf("itemsFilled semaphore failed to open. \n");
-		interruptDetected = true;
-	}
-	if (MTstruct.spaceLeft == SEM_FAILED)
-	{
-		printf("spaceLeft semaphore failed to open\n");
-		interruptDetected = true;
-	}
-
-	while(!interruptDetected) // read shared memory while there is no keyboard input
-	{// note: don't know if this works in a browser
-		reading(MTstruct);
-	}
-
-	// safeExit(); for when the semaphores work
-
-	printf("<p>You have clicked CTRL+C. The end of the page will now be made.</p>\n");
-
-	endPage();
-
-    shmCleanup(memoryName);
-    semCleanup(itemsFilledSemName);
-    semCleanup(spaceLeftSemName);
-
-    return 0;
-}
-
-void handleInput()
-{
-	char* data;
-	long lr, rr, l;		// The values for the left- and right rumbler and light
-
-	data = getenv("QUERY_STRING");
-	if (data == NULL)
-		printf("No message found\n");
-	else if (sscanf(data, "lr=%ld&rr=%ld&l%ld", &lr, &rr, &l) != 3)	// Check if there are 3 variables sent to the cgi
-		printf("Invalid data. Data must be numeric.\n");
-	else
-	{
-		char mq_name[80] = "/_mq_mq_";
-		int rtnval = -1;
-
-		mqd_t mq_fd = -1;
-		struct mq_attr attr;
-
-		x360outputs outputs;
-		outputs.leftRumbler = lr;
-		outputs.rightRumbler = rr;
-		outputs.lightFunction = l;
-
-		mq_fd = mq_open(mq_name, O_WRONLY);	// Try to open an existing MQ (Write only mode)
-
-		if (mq_fd != -1)	// If it exists
-		{
-			// Send the outputs to the queue
-			rtnval = mq_send(mq_fd, (char *) &outputs, sizeof(outputs), 0);
-			if (rtnval == -1)
-				printf("Error sending message to queue.\n");
-
-		}
-		else // Else: open a new MQ
-		{
-			attr.mq_maxmsg = 3;	// We only need 1 struct at the time, but this is for convenience 
-			attr.mq_msgsize = sizeof(x360outputs);
-			
-			rtnval = mq_fd = mq_open(mq_name, O_WRONLY | O_CREAT | O_EXCL, 0600, &attr);
-			if (rtnval == -1)
-			{
-				printf("Error opening a new queue.\n");
-				return;
-			}
-
-			rtnval = mq_send(mq_fd, (char *) &outputs, sizeof(outputs), 0);
-
-			if (rtnval == -1)
-				printf("Error sending message to queue.\n");
-		}
-
-		rtnval = mq_unlink(mq_name);
-
+		// Send the outputs to the queue
+		rtnval = mq_send(mq_fd, (char *) &choice, sizeof(choice), 0);
 		if (rtnval == -1)
-			printf("Error unlinking from the queue.\n");	
+			printf("Error sending message to queue.\n");
+
+		mq_unlink(mq_name);
 	}
 }
 
-void reading (multithreading MTstruct)
+void reading(char* memoryName,
+	sem_t* writeSem, 
+	sem_t* readSem)
 {
-    int rtnval;
-    int positionToRead;
-    // x360inputs readNr;
+	int rtnval;
+	int positionToRead;
+	//inputStruct readInput;
 
-    // TODO: make use of this
-    // x360inputs* shm_inputs = (x360inputs*)MTstruct.sharedMem;
-
-    while(!interruptDetected)
-    {
-        rtnval = sem_wait(MTstruct.itemsFilled);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_wait() failed");
-            break;
-        }
+	rtnval = sem_wait(writeSem);
+	if(rtnval != 0)
+	{
+		perror("ERROR: sem_wait() failed");
+		return;
+	}
 
         // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToRead);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_getvalue() failed");
-            break;
-        }
+	rtnval = sem_getvalue(writeSem, &positionToRead);
+	if(rtnval != 0)
+	{
+		perror("ERROR: sem_getvalue() failed");
+		return;
+	}
 
         // TODO: actually use the read values
-        // x360inputs readInput = shm_inputs[positionToRead];
-        
-        rtnval = sem_post(MTstruct.spaceLeft);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
+        // inputStruct readInput = shm_inputs[positionToRead];
 
-        // printf("input: %d - ", readNr.value);
+	rtnval = sem_post(readSem);
+	if(rtnval != 0)
+	{
+		perror("ERROR: sem_post() failed");
+		return;
+	}
+        // print inputstruct
+	inputStruct* shm_inputs = (inputStruct*)memoryName;
 
-        	// To DO: convert to print x360inputs
-/*        int i = 0;
-        for (; i < PRONUNCIATIONLENGTH; i++)
-        {
-            char gelezenKarakter = readNr.pronunciation[i];
-            if (gelezenKarakter == '\0')
-            {
-                break;
-            }
-            else
-            {
-                printf("%c", gelezenKarakter);
-            }
-        }*/
-        printf("\n");
-    }
+	printInput(shm_inputs);
 
-    // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct.spaceLeft);
+	printf("\n");
+
 }
 
 // HTML stuff
@@ -219,8 +92,6 @@ void header(char* mimeType)
 {
 	printf("Content-type:%s\n\n", mimeType);
 }
-
-
 
 void startPage(char* title)
 {
@@ -231,79 +102,174 @@ void startPage(char* title)
 	printf("<body>");
 }
 
-void outputsForm()
-{
-	printf("<form action='../mult.cgi'>");
-		printf("<div>");
-			printf("<label>");
-				printf("Left rumbler intensity (0 to 100%%)");
-				printf("<input name='lr' size='3'>");
-			printf("</label>");
-		printf("</div>");
-		printf("<div>");
-			printf("<label>");
-				printf("Right rumbler intensity (0 to 100%%)");
-				printf("<input name='rr' size='3'>");
-			printf("</label>");
-		printf("</div>");
-
-
-		printf("<div>");
-			printf("<label>");
-				printf("Light (0 to 13): <input name='l' size='2'>");
-			printf("</label>");
-		printf("</div>");
-		printf("<div>");
-			printf("<input type='submit' value='Send'>");
-		printf("</div>");
-	printf("</form>");
-
-
-	/* Probably not needed, but i'll keep this here for now
-	<form action="../mult.cgi">
-		<div>
-			<label>
-				Update controller-input:
-				<input type="submit" value="Send">	
-			</label>
-			
-		</div>
-	</form>*/
-}
-
 void endPage()
 {
 	printf("</body>");
 	printf("</html>");
 }
 
-// Handling a clean exit for the semaphore
-
-void safeExit (sem_t * semaphoreToTest)
+void printInput(inputStruct* input)
 {
-    int semaphoreValue;
-    int rtnval;
+	printf("<p>Input: </p>\n");
 
-    rtnval = sem_getvalue(semaphoreToTest, &semaphoreValue);
-    if(rtnval != 0)
-    {
-        perror("ERROR: sem_getvalue() failed");
-    }
+	if (input->leftTriggerInput > deadzone)
+	{
+		printf("Left trigger pressed\n");
+	}
 
-    if (semaphoreValue == 0)
-    {
-        rtnval = sem_post(semaphoreToTest);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-        }
-    }
+	if (input->rightTriggerInput > deadzone)
+	{
+		printf("Right trigger pressed\n");
+	}
+
+	if (input->group1Input> 0)
+	{
+		// At least one of the buttons in this group is pressed
+
+		if (input->group1Input >= rightStick)
+		{
+			input->group1Input -= rightStick;
+			printf("Right stick pressed\n");
+		}
+		if (input->group1Input >= leftStick)
+		{
+			input->group1Input -= leftStick;
+			printf("Left stick pressed\n");
+		}
+		if (input->group1Input >= backButton)
+		{
+			input->group1Input -= backButton;
+			printf("Back pressed\n");
+		}
+		if (input->group1Input >= startButton)
+		{
+			input->group1Input -= startButton;
+			printf("Start pressed\n");
+		}
+		if (input->group1Input >= dpadRight)
+		{
+			input->group1Input -= dpadRight;
+			printf("D-Pad right pressed\n");
+		}
+		if (input->group1Input >= dpadLeft)
+		{
+			input->group1Input -= dpadLeft;
+			printf("D-Pad left pressed\n");
+		}
+		if (input->group1Input >= dpadDown)
+		{
+			input->group1Input -= dpadDown;
+			printf("D-Pad down pressed\n");
+		}
+		if (input->group1Input >= dpadUp)
+		{
+			input->group1Input -= dpadUp;
+			printf("D-Pad up pressed\n");
+		}
+	}
+
+	if (input->group2Input > 0)
+	{
+		// At least one of the buttons in this group is pressed
+		if (input->group2Input >= buttonY)
+		{
+			input->group2Input -= buttonY;
+			printf("Y ");
+		}
+		if (input->group2Input >= buttonX)
+		{
+			input->group2Input -= buttonX;
+			printf("X ");
+		}
+		if (input->group2Input >= buttonB)
+		{
+			input->group2Input -= buttonB;
+			printf("B ");
+		}
+		if (input->group2Input >= buttonA)
+		{
+			input->group2Input -= buttonA;
+			printf("A ");
+		}
+		if (input->group2Input >= buttonXBOX)
+		{
+			input->group2Input -= buttonXBOX;
+			printf("XBOX button pressed\n");
+		}
+		if (input->group2Input >= rightShoulder)
+		{
+			input->group2Input -= rightShoulder;
+			printf("Right shoulder pressed\n");
+		}
+		if (input->group2Input >= leftShoulder)
+		{
+			input->group2Input -= leftShoulder;
+			printf("Left shoulder pressed\n");
+		}
+	}
 }
 
-// Handling the interrupt
-
-void  InterruptHandler(int sig)
+int main(void)
 {
-    signal(sig, SIG_IGN);
-    interruptDetected = true;
+	char* memName = sharedMemName;
+	char* availableName = itemAvailableSemName;
+	char* requestName = itemRequestSemName;
+
+	char* memory;
+	sem_t* availableSem;			
+	sem_t* requestSem;
+
+    // Other variables that are used throughout the program.
+	int structSize = sizeof(inputStruct);
+
+	memory = my_shm_create(structSize, memName);
+	requestSem = my_sem_open(requestName);
+	availableSem = my_sem_open(availableName);
+
+	// Starting to create the HTML:
+	header("text/html\n");
+	startPage("Controller Controller\n");
+
+	char* data;
+	int choice;
+
+	printf("<p>Choose a number:</p>\n");
+	printf("<p>[0]		LEDs Blink </p>"
+			"<p>[1]		LEDs Spin</p>"
+			"<p>[2]		LEDs Off</p>"
+			"<p>[3]		Left Rumbler on</p>"
+			"<p>[4]		Right Rumbler on</p>"
+			"<p>[5]		Left Rumbler off</p>"
+			"<p>[6]		Right Rumbler off</p>"
+			"<p>[7]		Read Controller input</p>");
+	
+	data = getenv("QUERY_STRING");
+	
+	if (data == NULL)
+		printf("No message found\n");
+	else if (sscanf(data, "choice=%d", &choice) != 1)	// Check if there are 3 variables sent to the cgi
+		printf("Invalid data. Data must be numeric.\n");
+	else
+	{
+		if (choice == 7)
+		{
+			if (requestSem != SEM_FAILED && availableSem != SEM_FAILED)
+			{
+				reading(memory, requestSem, availableSem);
+				handleInput(choice);
+			}
+		}
+		else
+		{
+			handleInput(choice);
+		}
+
+		shmCleanup(memory);
+		semCleanup(requestName);
+		semCleanup(availableName);
+	}
+
+	endPage();
+
+	return 0;
 }
