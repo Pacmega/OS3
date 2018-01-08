@@ -7,7 +7,7 @@ LIBUSB = -lusb-1.0
 CGI_LIBRARIES = lib/semshm.c
 DAEMON_SOURCE = code/daemon.c
 CGI_SOURCE = code/cgi.c
-# Not quite sure if that's how CGI is actually going to work
+# TODO: Not quite sure if that's how CGI is actually going to work
 
 CC=gcc
 

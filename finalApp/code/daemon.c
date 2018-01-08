@@ -115,7 +115,9 @@ void printReport()
 
 int main(int argc, char const *argv[])
 {
-	createDaemon();
+	// TODO: once everything works, create as daemon instead of normal process
+	// TODO: to translate to daemon, replace all prints by syslog(LOG_NOTICE, *message string*);
+	// createDaemon();
 
     libusb_device_handle *h;
 	
@@ -133,7 +135,6 @@ int main(int argc, char const *argv[])
 	
 	error = 0;
 
-	// TODO: receive USB data on demand instead of continuously
 	while(true)
 	{
 		if ((error = libusb_interrupt_transfer(h, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
@@ -156,5 +157,7 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-    return 0;
+	syslog (LOG_NOTICE, "Daemon terminated.");
+
+    return EXIT_SUCCESS;
 }
