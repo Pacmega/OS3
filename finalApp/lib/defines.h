@@ -1,10 +1,10 @@
 #ifndef DEFINES
 #define DEFINES
 
-#define writeSemName "/itemsToWrite"
-#define readSemName "/itemsToRead"
+#define itemRequestSemName "/itemRequested"
+#define itemAvailableSemName "/itemAvailable"
 #define sharedMemName "OSUSBsharedmem"
-#define mqName "/_mq_mq_" // TODO: a good name?
+#define messageQueueName "/_mq_mq_"
 
 #define deadzone 10
 #endif
