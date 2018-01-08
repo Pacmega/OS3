@@ -13,10 +13,3 @@ typedef struct
     int           leftStickInput;    // Left stick
     int           rightStickInput;   // Right stick
 } inputStruct;
-
-typedef struct 
-{
-	int 	leftRumbler;
-	int		rightRumbler;
-	int		lightFunction;
-}x360outputs;
