@@ -31,6 +31,7 @@ typedef struct
 	sem_t * itemAvailableSem;
 	sem_t * itemRequestedSem;
 	libusb_device_handle * deviceHandle;
+	mqd_t messageQueue;
 } multithreading;
 
 unsigned char inputReport[14] = {0};
@@ -97,6 +98,7 @@ unsigned char inputReport[14] = {0};
 // 	openlog("USBdaemon", LOG_PID, LOG_DAEMON);
 // }
 
+// TODO: delete this
 void printReport()
 {
 	printf("Input report\n");
@@ -122,24 +124,64 @@ void printReport()
 	printf("%d\n", inputReport[13]);
 }
 
+int createStick(unsigned char leftMost, unsigned char secondLeft, unsigned char secondRight, unsigned char rightMost)
+{
+	int stickValue = 0;
+	stickValue |= (leftMost << (3 * sizeof(unsigned char)));
+	stickValue |= (secondLeft << (2 * sizeof(unsigned char)));
+	stickValue |= (secondRight << (1 * sizeof(unsigned char)));
+	stickValue |= rightMost;
+	return stickValue;
+}
+
 void * settingChanger (void* arg)
 {
-	printf("Ik ben een thread.\n");
+	multithreading * mtStruct = (multithreading*) arg;
+	int rtnval = 0;
+	sem_post(mtStruct->itemRequestedSem);
+
+	while(1)
+	{
+		rtnval = sem_wait(mtStruct->itemAvailableSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
+
+        printf("Ik ben een thread.\n");
+
+        rtnval = sem_post(mtStruct->itemRequestedSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_post() failed");
+            break;
+        }
+	}
+	
 	return (NULL);
 }
 
 void * inputReporter (void* arg)
 {
-	// TODO: uncomment this
-	// libusb_device_handle* deviceHandle = (libusb_device_handle*) arg;
-	// int rtnval = 0;
+	multithreading * mtStruct = (multithreading*) arg;
+	inputStruct structToSend;
+	int rtnval = 0;
 	// int transferred;
 
-	// TODO: receive USB data on demand instead of continuously
+	inputStruct* shm_inputStruct = (inputStruct*) mtStruct->sharedMemory;
+
 	while(true)
 	{
+		rtnval = sem_wait(mtStruct->itemRequestedSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
+
 		// TODO: uncomment this
-		// if ((rtnval = libusb_interrupt_transfer(deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
+		// if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
 		// {
 		// 	fprintf(stderr, "Transfer failed: %d\n", rtnval);
 		// 	break;
@@ -147,6 +189,14 @@ void * inputReporter (void* arg)
 		// else
 		{
 			printReport();
+			structToSend.group1Input = inputReport[inputGroup1];
+			structToSend.group2Input = inputReport[inputGroup2];
+			structToSend.leftTriggerInput = inputReport[leftTrigger];
+			structToSend.rightTriggerInput = inputReport[rightTrigger];
+			structToSend.leftStickInput = createStick(inputReport[leftStickPt1], inputReport[leftStickPt2], inputReport[leftStickPt3], inputReport[leftStickPt4]);
+			structToSend.rightStickInput = createStick(inputReport[rightStickPt1], inputReport[rightStickPt2], inputReport[rightStickPt3], inputReport[rightStickPt4]);
+
+			*shm_inputStruct = structToSend;
 			// interpretButtons();
 			// rumbleSetting(smallRumbler, bigRumbler);
 			// lightSetting(lightMode);
@@ -157,6 +207,13 @@ void * inputReporter (void* arg)
 			// 	return (1);
 			// }
 		}
+
+		rtnval = sem_post(mtStruct->itemAvailableSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_post() failed");
+            break;
+        }
 	}
 
 	return (NULL);
@@ -168,16 +225,15 @@ int main(int argc, char const *argv[])
 	// TODO: replace printf's by actual log messages
 	// createDaemon();
 
-	mqd_t messageQueue = -1;
-	inputStruct structToSend;
 	multithreading mtStruct;
+	mtStruct.messageQueue = -1;
 	mtStruct.itemAvailableSem = my_sem_open(itemAvailableSemName); // Create the semaphore to publish if an item was already provided by this program.
 	mtStruct.itemRequestedSem = my_sem_open(itemRequestSemName);   // Create the semaphore to know if an item was requested by the user
 	mtStruct.sharedMemory     = (char *) MAP_FAILED;
 	pthread_t changeSettingsThread;
 	pthread_t sendStatusThread;
 
-	int structSize = sizeof(structToSend);
+	int structSize = sizeof(inputStruct);
 
 	libusb_init(NULL);
 	// TODO: uncomment this
@@ -190,14 +246,19 @@ int main(int argc, char const *argv[])
 	// 	return (1);
 	// }
 
-	messageQueue = mq_open (messageQueueName, O_RDONLY);
-	if (messageQueue == -1)
+	mtStruct.messageQueue = mq_open (messageQueueName, O_RDONLY);
+	if (mtStruct.messageQueue == -1)
 	{
-		messageQueue = mq_open (messageQueueName, O_RDONLY | O_CREAT | O_EXCL, 0600, &structToSend);
-		if (messageQueue == -1)
+		struct mq_attr attr;
+		attr.mq_maxmsg = 1;
+		attr.mq_msgsize = sizeof(int);
+
+		mtStruct.messageQueue = mq_open (messageQueueName, O_RDONLY | O_CREAT | O_EXCL, 0600, &attr);
+		if (mtStruct.messageQueue == -1)
 		{
 			// Messagequeue is unusable.
 			printf("Unable to open message queue.");
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -206,14 +267,14 @@ int main(int argc, char const *argv[])
         printf("Critical error: unable to open itemsFilled semaphore.");
 
         // Unable to properly execute without semaphore, shut down.
-        return -1;
+        exit(EXIT_FAILURE);
     }
     if (mtStruct.itemRequestedSem == SEM_FAILED)
     {
         printf("Critical error: unable to open spaceLeft semaphore.");
 
         // Unable to properly execute without semaphore, shut down.
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     if (mtStruct.sharedMemory == MAP_FAILED)
@@ -224,11 +285,11 @@ int main(int argc, char const *argv[])
             printf("Critical error: unable to open or create shared memory.\n");
 
             // Unable to properly execute without shared memory, shut down.
-            return -1;
+            exit(EXIT_FAILURE);
         }
     }
 
-	if (pthread_create (&changeSettingsThread, NULL, settingChanger, NULL) != 0)
+	if (pthread_create (&changeSettingsThread, NULL, settingChanger, &mtStruct) != 0)
     {
         perror ("controller setting changing thread");
     }
@@ -246,5 +307,5 @@ int main(int argc, char const *argv[])
     semCleanup(itemAvailableSemName);
     semCleanup(itemRequestSemName);
 
-    return 0;
+    exit(EXIT_SUCCESS);
 }

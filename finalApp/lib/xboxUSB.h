@@ -62,6 +62,15 @@
 	// No other values need to be defined for the triggers,
 	// they have an entire byte dedicated to them.
 
+	#define leftStickPt1		  6
+	#define leftStickPt2		  7
+	#define leftStickPt3		  8
+	#define leftStickPt4		  9
+	#define rightStickPt1		  10
+	#define rightStickPt2		  11
+	#define rightStickPt3		  12
+	#define rightStickPt4		  13
+
 	// LED modes
 	#define allLEDsOff            0x00
 	#define allLEDsBlinking       0x01

@@ -18,8 +18,6 @@
 #include "../lib/defines.h"
 #include "../lib/xboxUSB.h"
 
-#define MEMORYSIZE 5 // The size of the shared memory
-
 void printInput(inputStruct* input);
 void endPage();
 void startPage(char* title);
@@ -29,7 +27,7 @@ void reading (char* memoryName, sem_t* writeSem, sem_t* readSem);
 
 void handleInput(int choice)
 {
-	char mq_name[80] = mqName;
+	char mq_name[nameSize] = messageQueueName;
 	int rtnval = -1;
 
 	mqd_t mq_fd = -1; 
@@ -214,20 +212,19 @@ void printInput(inputStruct* input)
 int main(void)
 {
 	char* memName = sharedMemName;
-	char* writeName = writeSemName;
-	char* readName = readSemName;
+	char* availableName = itemAvailableSemName;
+	char* requestName = itemRequestSemName;
 
 	char* memory;
-	sem_t* writeSem;			
-	sem_t* readSem;
+	sem_t* availableSem;			
+	sem_t* requestSem;
 
     // Other variables that are used throughout the program.
 	int structSize = sizeof(inputStruct);
-	int arraySize = MEMORYSIZE * structSize;
 
-	memory = my_shm_create(arraySize, memName);
-	writeSem = my_sem_open(writeName);
-	readSem = my_sem_open(readName);
+	memory = my_shm_create(structSize, memName);
+	requestSem = my_sem_open(requestName);
+	availableSem = my_sem_open(availableName);
 
 	// Starting to create the HTML:
 	header("text/html\n");
@@ -256,9 +253,9 @@ int main(void)
 	{
 		if (choice == 7)
 		{
-			if (writeSem != SEM_FAILED && readSem == SEM_FAILED)
+			if (requestSem != SEM_FAILED && availableSem != SEM_FAILED)
 			{
-				reading(memory, writeSem, readSem);
+				reading(memory, requestSem, availableSem);
 				handleInput(choice);
 			}
 		}
@@ -268,8 +265,8 @@ int main(void)
 		}
 
 		shmCleanup(memory);
-		semCleanup(writeName);
-		semCleanup(readName);
+		semCleanup(requestName);
+		semCleanup(availableName);
 	}
 
 	endPage();
