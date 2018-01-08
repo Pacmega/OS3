@@ -1,11 +1,13 @@
-#ifndef DEFINES
-#define DEFINES
+#ifndef SEMSHM
+#define SEMSHM
 
-#define writeSemName "/itemsToWrite"
-#define readSemName "/itemsToRead"
-#define sharedMemName "OSUSBsharedmem"
-#define mqName "/_mq_mq_" // TODO: a good name?
+#include <semaphore.h>
 
-#define deadzone 10
+char * my_shm_create (int size, char* memoryName);
+char * my_shm_open (int size, char* memoryName);
+sem_t * my_sem_open (char* semaphoreName);
+
+void shmCleanup (char* shmName);
+void semCleanup (char* semaphoreName);
 
 #endif
