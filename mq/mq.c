@@ -59,7 +59,7 @@ int main(void)
             case 'n':
                 attr.mq_maxmsg  = 3;
                 attr.mq_msgsize = sizeof (MQ_REQUEST_MESSAGE);
-                rtnval = mq_fd = mq_open (mq_name, O_WRONLY | O_CREAT | O_EXCL, 0600, &attr);
+                rtnval = mq_fd = mq_open (mq_name, O_RDONLY | O_CREAT | O_EXCL, 0600, &attr);
                 break;
             case 'o':
                 mq_fd = mq_open (mq_name, O_WRONLY);

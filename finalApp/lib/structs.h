@@ -3,25 +3,24 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <libusb-1.0/libusb.h>
+#include <mqueue.h>
 
 typedef struct
 {
-    unsigned char group1;       // D-Pad, start and back buttons and stick presses
-    unsigned char group2;       // Shoulder buttons, A/B/X/Y and Xbox logo
-    unsigned char leftTrigger;  // Left trigger
-    unsigned char rightTrigger; // Right trigger
-    int           leftStick;    // Left stick
-    int           rightStick;   // Right stick
+    unsigned char group1Input;       // D-Pad, start and back buttons and stick presses
+    unsigned char group2Input;       // Shoulder buttons, A/B/X/Y and Xbox logo
+    unsigned char leftTriggerInput;  // Left trigger
+    unsigned char rightTriggerInput; // Right trigger
+    int           leftStickInput;    // Left stick
+    int           rightStickInput;   // Right stick
 } inputStruct;
 
-typedef struct 
-{
-	int 	leftRumbler;
-	int		rightRumbler;
-	int		lightFunction;
-}x360outputs;
-
 typedef struct
 {
-	
-}x360inputs;
+	char * 	sharedMemory;
+	sem_t * itemAvailableSem;
+	sem_t * itemRequestedSem;
+	libusb_device_handle * deviceHandle;
+	mqd_t messageQueue;
+} multithreading;
