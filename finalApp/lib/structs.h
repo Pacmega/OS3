@@ -3,6 +3,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <libusb-1.0/libusb.h>
+#include <mqueue.h>
 
 typedef struct
 {
@@ -12,27 +14,13 @@ typedef struct
     unsigned char rightTriggerInput; // Right trigger
     int           leftStickInput;    // Left stick
     int           rightStickInput;   // Right stick
-    /*
-    printf("Input report\n");
-    printf("Message type\t\t%d\n", inputReport[messageType]);
-    printf("Packet size (B)\t\t%d\n", inputReport[packetSize]);
-    printf("D-Pad + button group 1\t%d\n", inputReport[inputGroup1]);
-    printf("(Start/Back & stick press)\n");
-    printf("Button group 2\t\t%d\n", inputReport[inputGroup2]);
-    printf("(Shoulders, A/B/X/Y, Xbox logo)\n");
-    printf("Left trigger\t\t%d\n", inputReport[leftTrigger]);
-    printf("Right trigger\t\t%d\n", inputReport[rightTrigger]);
-    */
 } inputStruct;
-
-typedef struct 
-{
-	int 	leftRumbler;
-	int		rightRumbler;
-	int		lightFunction;
-}x360outputs;
 
 typedef struct
 {
-	
-}x360inputs;
+	char * 	sharedMemory;
+	sem_t * itemAvailableSem;
+	sem_t * itemRequestedSem;
+	libusb_device_handle * deviceHandle;
+	mqd_t messageQueue;
+} multithreading;

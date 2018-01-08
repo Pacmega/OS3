@@ -18,21 +18,11 @@
 #include "../lib/structs.h"    // Data about the multithreading and number structs
 
 // TODO: go through this file and clean it up (and understand it)
-// TODO: rename this file
 #include "../lib/auxiliary.h"  // TODO: describe what this header is useful for
 
 #include "../lib/semshm.h"     // Semaphore & shared memory management functions
 #include "../lib/xboxUSB.h"    // Xbox 360 USB information and _BV() macro
 #include "../lib/defines.h"		   // defined names for semaphores, shared memory & message queue
-
-typedef struct
-{
-	char * 	sharedMemory;
-	sem_t * itemAvailableSem;
-	sem_t * itemRequestedSem;
-	libusb_device_handle * deviceHandle;
-	mqd_t messageQueue;
-} multithreading;
 
 unsigned char inputReport[14] = {0};
 
@@ -138,25 +128,20 @@ void * settingChanger (void* arg)
 {
 	multithreading * mtStruct = (multithreading*) arg;
 	int rtnval = 0;
+	char receivedMessage;
 	sem_post(mtStruct->itemRequestedSem);
 
 	while(1)
 	{
-		rtnval = sem_wait(mtStruct->itemAvailableSem);
+		rtnval = mq_receive(mtStruct->messageQueue, &receivedMessage, sizeof(receivedMessage), NULL);
 		if(rtnval != 0)
         {
-            perror("ERROR: sem_wait() failed");
+            perror("ERROR: mq_receive() failed");
             break;
         }
 
+        // TODO: use received message to change setting on controller
         printf("Ik ben een thread.\n");
-
-        rtnval = sem_post(mtStruct->itemRequestedSem);
-		if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
 	}
 	
 	return (NULL);
