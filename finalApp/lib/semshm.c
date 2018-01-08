@@ -21,12 +21,14 @@ char * my_shm_create (int size, char* shmName)
     if (shm_filedescriptor == -1)
     {
         perror ("ERROR: unable to create shared memory");
+        return MAP_FAILED;
     }
 
     rtnval = ftruncate (shm_filedescriptor, size);
     if (rtnval != 0)
     {
         perror ("ERROR: ftruncate() failed");
+        return MAP_FAILED;
     }
 
     shm_addr = (char *) mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_filedescriptor, 0);
@@ -35,6 +37,7 @@ char * my_shm_create (int size, char* shmName)
         perror ("ERROR: mmap() failed");
     }
 
+    printf("Shm create returning %p\n", shm_addr);
     return (shm_addr);
 }
 
@@ -50,10 +53,10 @@ char * my_shm_open (int size, char* shmName)
         // Unable to open. Try to create it instead!
         printf("Unable to open shared memory. Attempting to create it now.\n");
         shm_addr = my_shm_create(size, shmName);
-        if (shm_filedescriptor == -1)
+        if (shm_addr == MAP_FAILED)
         {
             perror ("ERROR: unable to open or create shared memory");
-            return NULL;
+            return shm_addr;
         }
         else
         {
@@ -68,6 +71,8 @@ char * my_shm_open (int size, char* shmName)
     {
         perror ("ERROR: mmap() failed");
     }
+
+    printf("Returned shm_addr = %p\n", shm_addr);
 
     return (shm_addr);
 }

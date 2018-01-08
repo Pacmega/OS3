@@ -182,57 +182,57 @@ void * settingChanger (void* arg)
 
 void * inputReporter (void* arg)
 {
-	// multithreading * mtStruct = (multithreading*) arg;
-	// inputStruct structToSend;
-	// int rtnval = 0;
-	// int transferred;
+	multithreading * mtStruct = (multithreading*) arg;
+	inputStruct structToSend;
+	int rtnval = 0;
+	int transferred;
 
-	// inputStruct* shm_inputStruct = (inputStruct*) mtStruct->sharedMemory;
+	inputStruct* shm_inputStruct = (inputStruct*) mtStruct->sharedMemory;
 
-	// while(true)
-	// {
-	// 	rtnval = sem_wait(mtStruct->itemRequestedSem);
-	// 	if(rtnval != 0)
- //        {
- //            perror("ERROR: sem_wait() failed");
- //            break;
- //        }
+	while(true)
+	{
+		rtnval = sem_wait(mtStruct->itemRequestedSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_wait() failed");
+            break;
+        }
 
-	// 	// TODO: uncomment this
-	// 	if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
-	// 	{
-	// 		fprintf(stderr, "Transfer failed: %d\n", rtnval);
-	// 		break;
-	// 	}
-	// 	else
-	// 	{
-	// 		printReport();
-	// 		structToSend.group1Input = inputReport[inputGroup1];
-	// 		structToSend.group2Input = inputReport[inputGroup2];
-	// 		structToSend.leftTriggerInput = inputReport[leftTrigger];
-	// 		structToSend.rightTriggerInput = inputReport[rightTrigger];
-	// 		structToSend.leftStickInput = createStick(inputReport[leftStickPt1], inputReport[leftStickPt2], inputReport[leftStickPt3], inputReport[leftStickPt4]);
-	// 		structToSend.rightStickInput = createStick(inputReport[rightStickPt1], inputReport[rightStickPt2], inputReport[rightStickPt3], inputReport[rightStickPt4]);
+		// TODO: uncomment this
+		if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
+		{
+			fprintf(stderr, "Transfer failed: %d\n", rtnval);
+			break;
+		}
+		else
+		{
+			printReport();
+			structToSend.group1Input = inputReport[inputGroup1];
+			structToSend.group2Input = inputReport[inputGroup2];
+			structToSend.leftTriggerInput = inputReport[leftTrigger];
+			structToSend.rightTriggerInput = inputReport[rightTrigger];
+			structToSend.leftStickInput = createStick(inputReport[leftStickPt1], inputReport[leftStickPt2], inputReport[leftStickPt3], inputReport[leftStickPt4]);
+			structToSend.rightStickInput = createStick(inputReport[rightStickPt1], inputReport[rightStickPt2], inputReport[rightStickPt3], inputReport[rightStickPt4]);
 
-	// 		*shm_inputStruct = structToSend;
-	// 		// interpretButtons();
-	// 		// rumbleSetting(smallRumbler, bigRumbler);
-	// 		// lightSetting(lightMode);
+			*shm_inputStruct = structToSend;
+			// interpretButtons();
+			// rumbleSetting(smallRumbler, bigRumbler);
+			// lightSetting(lightMode);
 
-	// 		// if ((rtnval = sendNewSettings(deviceHandle, lightMode, smallRumbler, bigRumbler)) != 0)
-	// 		// {
-	// 		// 	fprintf(stderr, "Transfer failed: %d\n", rtnval);
-	// 		// 	return (1);
-	// 		// }
-	// 	}
+			// if ((rtnval = sendNewSettings(deviceHandle, lightMode, smallRumbler, bigRumbler)) != 0)
+			// {
+			// 	fprintf(stderr, "Transfer failed: %d\n", rtnval);
+			// 	return (1);
+			// }
+		}
 
-	// 	rtnval = sem_post(mtStruct->itemAvailableSem);
-	// 	if(rtnval != 0)
- //        {
- //            perror("ERROR: sem_post() failed");
- //            break;
- //        }
-	// }
+		rtnval = sem_post(mtStruct->itemAvailableSem);
+		if(rtnval != 0)
+        {
+            perror("ERROR: sem_post() failed");
+            break;
+        }
+	}
 
 	return (NULL);
 }
