@@ -6,12 +6,12 @@
 
 typedef struct
 {
-    unsigned char group1;       // D-Pad, start and back buttons and stick presses
-    unsigned char group2;       // Shoulder buttons, A/B/X/Y and Xbox logo
-    unsigned char leftTrigger;  // Left trigger
-    unsigned char rightTrigger; // Right trigger
-    int           leftStick;    // Left stick
-    int           rightStick;   // Right stick
+    unsigned char group1Input;       // D-Pad, start and back buttons and stick presses
+    unsigned char group2Input;       // Shoulder buttons, A/B/X/Y and Xbox logo
+    unsigned char leftTriggerInput;  // Left trigger
+    unsigned char rightTriggerInput; // Right trigger
+    int           leftStickInput;    // Left stick
+    int           rightStickInput;   // Right stick
 } inputStruct;
 
 typedef struct 

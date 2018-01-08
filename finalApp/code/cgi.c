@@ -15,6 +15,8 @@
 
 #include "../lib/structs.h" // structs that we will use to communicate to daemon
 #include "../lib/semshm.h"
+#include "../lib/defines.h"
+#include "../lib/xboxUSB.h"
 
 #define MEMORYSIZE 5 // The size of the shared memory
 
@@ -42,7 +44,7 @@ void handleInput()
 		printf("Invalid data. Data must be numeric.\n");
 	else
 	{
-		char mq_name[80] = "/_mq_mq_";
+		char mq_name[80] = mqName;
 		int rtnval = -1;
 
 		mqd_t mq_fd = -1;
@@ -89,49 +91,49 @@ void handleInput()
 }
 
 void reading (char* memoryName,
-	 			sem_t* writeSem, 
-	 			sem_t* readSem)
+	sem_t* writeSem, 
+	sem_t* readSem)
 {
-    int rtnval;
-    int positionToRead;
-    inputStruct readInput;
+	int rtnval;
+	int positionToRead;
+	//inputStruct readInput;
 
-    while(!interruptDetected)
-    {
-        rtnval = sem_wait(writeSem);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_wait() failed");
-            break;
-        }
+	while(!interruptDetected)
+	{
+		rtnval = sem_wait(writeSem);
+		if(rtnval != 0)
+		{
+			perror("ERROR: sem_wait() failed");
+			break;
+		}
 
         // Get the position where there is space to write.
-        rtnval = sem_getvalue(writeSem, &positionToRead);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_getvalue() failed");
-            break;
-        }
+		rtnval = sem_getvalue(writeSem, &positionToRead);
+		if(rtnval != 0)
+		{
+			perror("ERROR: sem_getvalue() failed");
+			break;
+		}
 
         // TODO: actually use the read values
         // inputStruct readInput = shm_inputs[positionToRead];
-        
-        rtnval = sem_post(readSem);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-            break;
-        }
+
+		rtnval = sem_post(readSem);
+		if(rtnval != 0)
+		{
+			perror("ERROR: sem_post() failed");
+			break;
+		}
         // print inputstruct
-    	inputStruct* shm_inputs = (inputStruct*)memoryName;
+		inputStruct* shm_inputs = (inputStruct*)memoryName;
 
-    	printInput(shm_inputs);
+		printInput(shm_inputs);
 
-        printf("\n");
-    }
+		printf("\n");
+	}
 
     // Check if the readSem semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(readSem);
+	safeExit(readSem);
 }
 
 // HTML stuff
@@ -155,28 +157,28 @@ void startPage(char* title)
 void outputsForm()
 {
 	printf("<form action='../mult.cgi'>");
-		printf("<div>");
-			printf("<label>");
-				printf("Left rumbler intensity (0 to 100%%)");
-				printf("<input name='lr' size='3'>");
-			printf("</label>");
-		printf("</div>");
-		printf("<div>");
-			printf("<label>");
-				printf("Right rumbler intensity (0 to 100%%)");
-				printf("<input name='rr' size='3'>");
-			printf("</label>");
-		printf("</div>");
+	printf("<div>");
+	printf("<label>");
+	printf("Left rumbler intensity (0 to 100%%)");
+	printf("<input name='lr' size='3'>");
+	printf("</label>");
+	printf("</div>");
+	printf("<div>");
+	printf("<label>");
+	printf("Right rumbler intensity (0 to 100%%)");
+	printf("<input name='rr' size='3'>");
+	printf("</label>");
+	printf("</div>");
 
 
-		printf("<div>");
-			printf("<label>");
-				printf("Light (0 to 13): <input name='l' size='2'>");
-			printf("</label>");
-		printf("</div>");
-		printf("<div>");
-			printf("<input type='submit' value='Send'>");
-		printf("</div>");
+	printf("<div>");
+	printf("<label>");
+	printf("Light (0 to 13): <input name='l' size='2'>");
+	printf("</label>");
+	printf("</div>");
+	printf("<div>");
+	printf("<input type='submit' value='Send'>");
+	printf("</div>");
 	printf("</form>");
 
 
@@ -202,46 +204,146 @@ void endPage()
 
 void safeExit (sem_t * semaphoreToTest)
 {
-    int semaphoreValue;
-    int rtnval;
+	int semaphoreValue;
+	int rtnval;
 
-    rtnval = sem_getvalue(semaphoreToTest, &semaphoreValue);
-    if(rtnval != 0)
-    {
-        perror("ERROR: sem_getvalue() failed");
-    }
+	rtnval = sem_getvalue(semaphoreToTest, &semaphoreValue);
+	if(rtnval != 0)
+	{
+		perror("ERROR: sem_getvalue() failed");
+	}
 
-    if (semaphoreValue == 0)
-    {
-        rtnval = sem_post(semaphoreToTest);
-        if(rtnval != 0)
-        {
-            perror("ERROR: sem_post() failed");
-        }
-    }
+	if (semaphoreValue == 0)
+	{
+		rtnval = sem_post(semaphoreToTest);
+		if(rtnval != 0)
+		{
+			perror("ERROR: sem_post() failed");
+		}
+	}
 }
 
 // Handling the interrupt
 
 void InterruptHandler(int sig)
 {
-    signal(sig, SIG_IGN);
-    interruptDetected = true;
+	signal(sig, SIG_IGN);
+	interruptDetected = true;
 }
 
 void printInput(inputStruct* input)
 {
-	printf("This will be the input\n");
-}
+	printf("<p>Input: </p>\n");
 
+	if (input->leftTriggerInput > deadzone)
+	{
+		printf("Left trigger pressed\n");
+	}
+
+	if (input->rightTriggerInput > deadzone)
+	{
+		printf("Right trigger pressed\n");
+	}
+
+	if (input->group1Input> 0)
+	{
+		// At least one of the buttons in this group is pressed
+
+		if (input->group1Input >= rightStick)
+		{
+			input->group1Input -= rightStick;
+			printf("Right stick pressed\n");
+		}
+		if (input->group1Input >= leftStick)
+		{
+			input->group1Input -= leftStick;
+			printf("Left stick pressed\n");
+		}
+		if (input->group1Input >= backButton)
+		{
+			input->group1Input -= backButton;
+			printf("Back pressed\n");
+		}
+		if (input->group1Input >= startButton)
+		{
+			input->group1Input -= startButton;
+			printf("Start pressed\n");
+		}
+		if (input->group1Input >= dpadRight)
+		{
+			input->group1Input -= dpadRight;
+			printf("D-Pad right pressed\n");
+		}
+		if (input->group1Input >= dpadLeft)
+		{
+			input->group1Input -= dpadLeft;
+			printf("D-Pad left pressed\n");
+		}
+		if (input->group1Input >= dpadDown)
+		{
+			input->group1Input -= dpadDown;
+			printf("D-Pad down pressed\n");
+		}
+		if (input->group1Input >= dpadUp)
+		{
+			input->group1Input -= dpadUp;
+			printf("D-Pad up pressed\n");
+		}
+	}
+
+	if (input->group2Input > 0)
+	{
+		// At least one of the buttons in this group is pressed
+
+		if (input->group2Input >= buttonY)
+		{
+			input->group2Input -= buttonY;
+			printf("Y ");
+		}
+		if (input->group2Input >= buttonX)
+		{
+			input->group2Input -= buttonX;
+			printf("X ");
+		}
+		if (input->group2Input >= buttonB)
+		{
+			input->group2Input -= buttonB;
+			printf("B ");
+		}
+		if (input->group2Input >= buttonA)
+		{
+			input->group2Input -= buttonA;
+			printf("A ");
+		}
+		if (input->group2Input >= buttonXBOX)
+		{
+			input->group2Input -= buttonXBOX;
+			printf("XBOX button pressed\n");
+		}
+		if (input->group2Input >= rightShoulder)
+		{
+			input->group2Input -= rightShoulder;
+			printf("Right shoulder pressed\n");
+		}
+		if (input->group2Input >= leftShoulder)
+		{
+			input->group2Input -= leftShoulder;
+			printf("Left shoulder pressed\n");
+		}
+	}
+}
 
 int main(void)
 {
 	// Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
     // Instead, the program starts closing the semaphore & shared memory.
-    signal(SIGINT, InterruptHandler);
+	signal(SIGINT, InterruptHandler);
 
-    char* memoryName;		// No names needed, they are pre-defined in semshm.h
+	char* memName = sharedMemName;
+	char* writeName = writeSemName;
+	char* readName = readSemName;
+
+    char* memory;		// No names needed, they are pre-defined in semshm.h
     sem_t* writeSem;			
     sem_t* readSem;
 
@@ -249,49 +351,49 @@ int main(void)
     int structSize = sizeof(inputStruct);
     int arraySize = MEMORYSIZE * structSize;
 
-    memoryName = my_shm_create(arraySize, sharedMemName);
-    writeSem = my_sem_open(writeSemName);
-    readSem = my_sem_open(readSemName);
+    memory = my_shm_create(arraySize, memName);
+    writeSem = my_sem_open(writeName);
+    readSem = my_sem_open(readName);
 
 	// Starting to create the HTML:
-	header("text/html");
-	startPage("Controller Controller");
+    header("text/html");
+    startPage("Controller Controller");
 
-	printf("<p>Fill this in to send output to the controller</p>\n");
-	
-	outputsForm();
+    printf("<p>Fill this in to send output to the controller</p>\n");
 
-	printf("<p>If something went wrong with sending the output, It'll be shown below:</p>\n");
+    outputsForm();
 
-	handleInput();
+    printf("<p>If something went wrong with sending the output, It'll be shown below:</p>\n");
 
-	printf("<p>Here, the input of the controller is read and displayed below. You can stop getting data using CTRL+C</p>\n");
-	
-	if (writeSem == SEM_FAILED)
-	{
-		printf("writeSem semaphore failed to open. \n");
-		interruptDetected = true;
-	}
-	if (readSem == SEM_FAILED)
-	{
-		printf("readSem semaphore failed to open\n");
-		interruptDetected = true;
-	}
+    handleInput();
+
+    printf("<p>Here, the input of the controller is read and displayed below. You can stop getting data using CTRL+C</p>\n");
+
+    if (writeSem == SEM_FAILED)
+    {
+    	printf("writeSem semaphore failed to open. \n");
+    	interruptDetected = true;
+    }
+    if (readSem == SEM_FAILED)
+    {
+    	printf("readSem semaphore failed to open\n");
+    	interruptDetected = true;
+    }
 
 	while(!interruptDetected) // read shared memory while there is no keyboard input
 	{// note: don't know if this works in a browser
-		reading(memoryName, writeSem, readSem);
-	}
+reading(memory, writeSem, readSem);
+}
 
 	// safeExit(); for when the semaphores work
 
-	printf("<p>You have clicked CTRL+C. The end of the page will now be made.</p>\n");
+printf("<p>You have clicked CTRL+C. The end of the page will now be made.</p>\n");
 
-	endPage();
+endPage();
 
-    shmCleanup(memoryName);
-    semCleanup(writeSemName);
-    semCleanup(readSemName);
+shmCleanup(memory);
+semCleanup(writeName);
+semCleanup(readName);
 
-    return 0;
+return 0;
 }

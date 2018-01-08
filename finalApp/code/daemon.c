@@ -1,5 +1,7 @@
 #include <stdio.h>             // Printing to the terminal
 #include <string.h>            // Strings
+#include <syslog.h>			   // Logging information
+#include <stdlib.h>
 #include <sys/types.h>         // Shared memory
 #include <sys/mman.h>          // Shared memory
 #include <sys/stat.h>          // Shared memory
@@ -8,7 +10,7 @@
 #include <pthread.h>           // For POSIX threads
 #include <mqueue.h>            // For POSIX message queues
 #include <stdbool.h>           // Booleans
-#include <unistd.h>            // Sleep()
+#include <unistd.h>            // Sleep() & fork()
 #include <signal.h>            // For the keyboard interrupt
 #include <libusb-1.0/libusb.h> // USB library
 
@@ -24,6 +26,67 @@
 
 // Create an input report array of 14 characters, all containing zeroes.
 unsigned char inputReport[14] = {0};
+
+static void createDaemon()
+{
+	pid_t pid;
+
+	// Fork off the parent process
+	pid = fork();
+
+	if (pid < 0)
+	{
+		// An error occured.
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid > 0)
+	{
+		// Process was successfully forked: parent can terminate.
+		exit(EXIT_SUCCESS);
+	}
+
+	if (setsid() < 0)
+	{
+		// An error occured.
+		exit(EXIT_FAILURE);
+	}
+
+	// TODO: source lists two empty SIG handlers here. Needed or not?
+	// (https://stackoverflow.com/questions/17954432/creating-a-daemon-in-linux)
+
+	// Fork off for the second time.
+	if (pid < 0)
+	{
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid > 0)
+	{
+		// Second fork succeeded: let this parent terminate as well.
+		exit(EXIT_SUCCESS);
+	}
+
+	// File permissions for this process: none.
+	umask(0);
+
+	// Change the working directory of this process to the root directory
+	if(chdir("/") != 0)
+	{
+		// Unable to change working directory.
+		exit(EXIT_FAILURE);
+	}
+
+	// Close all opened file desriptors (STDIN, STDOUT)
+	int x;
+	for (x = sysconf(_SC_OPEN_MAX); x >= 0; x--)
+	{
+		close(x);
+	}
+
+	// Open a log file to send log messages to.
+	openlog("USBdaemon", LOG_PID, LOG_DAEMON);
+}
 
 void printReport()
 {
@@ -52,6 +115,8 @@ void printReport()
 
 int main(int argc, char const *argv[])
 {
+	createDaemon();
+
     libusb_device_handle *h;
 	
 	int error, transferred;
@@ -64,7 +129,7 @@ int main(int argc, char const *argv[])
 		return (1);
 	}
 
-	inputStruct structToSend;
+	// inputStruct structToSend;
 	
 	error = 0;
 
