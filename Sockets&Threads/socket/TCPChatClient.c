@@ -7,7 +7,7 @@
 #include "Auxiliary.h"
 #include "CreateTCPClientSocket.h"
 
-#define RCVBUFSIZE 32   /* Size of receive buffer */
+#define RCVBUFSIZE 325   /* Size of receive buffer */
 
 int main (int argc, char *argv[])
 {
@@ -25,14 +25,19 @@ int main (int argc, char *argv[])
         printf("Failed to create a socket. \n");
         return -1;
     }
+    else
+    {
+        printf("Socket created: %d\n", sock);
+    }
 
     while(true)
     {
         printf("You: ");
         scanf("%[^\n]%*c", echoString);
-        echoStringLen = strlen(echoString);
+        echoStringLen = strlen("getDoorLeft;;");
+        printf("echoStringLen = %d\n", echoStringLen);
 
-        if (send(sock, echoString, echoStringLen, 0) < 0)
+        if (send(sock, "GetDoorLeft;", echoStringLen, 0) < 0)
         {
             printf("Error sending messages\n");
         }
@@ -62,6 +67,7 @@ int main (int argc, char *argv[])
 
     // delaying ();
 
+    printf("Fuck this shit I'm out\n");
     close (sock);
     info ("close & exit");
     exit(0);
