@@ -1,4 +1,4 @@
-DAEMON_APP = deamonApp
+DAEMON_APP = daemonApp
 CGI_APP = cgiApp
 
 CFLAGS = -O2 -Wall -Werror -lrt -lm -pthread -o
