@@ -24,9 +24,6 @@
 #include "../lib/semshm.h"     // Semaphore & shared memory management functions
 #include "../lib/xboxUSB.h"    // Xbox 360 USB information and _BV() macro
 
-// Create an input report array of 14 characters, all containing zeroes.
-unsigned char inputReport[14] = {0};
-
 static void createDaemon()
 {
 	pid_t pid;
@@ -117,8 +114,10 @@ int main(int argc, char const *argv[])
 {
 	createDaemon();
 
+	mqd_t messageQueue = -1;
     libusb_device_handle *h;
-	
+	inputStruct structToSend;
+
 	int error, transferred;
 	libusb_init(NULL);
 	h = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
@@ -129,8 +128,20 @@ int main(int argc, char const *argv[])
 		return (1);
 	}
 
-	// inputStruct structToSend;
-	
+	messageQueue = mq_open (mqName, O_RDONLY);
+	if (messageQueue == -1)
+	{
+		messageQueue = mq_open (mqName, O_RDONLY | O_CREAT | O_EXCL, 0600, &structToSend);
+		if (messageQueue == -1)
+		{
+			// Messagequeue is unusable.
+			printf("Unable to open message queue.");
+		}
+	}
+	// TODO: open semaphore
+
+	// TODO: open shm
+
 	error = 0;
 
 	// TODO: receive USB data on demand instead of continuously
