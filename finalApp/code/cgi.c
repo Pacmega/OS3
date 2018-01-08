@@ -18,83 +18,17 @@
 
 #define MEMORYSIZE 5 // The size of the shared memory
 
-void handleInput();
-void reading (multithreading MTstruct);
-void header(char* mimeType);
-void startPage(char* title);
-void outputsForm();
-void endPage();
-void safeExit (sem_t * semaphoreToTest);
-void  InterruptHandler(int sig);
-
 bool interruptDetected = false;
 
-int main(void)
-{
-	// Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
-    // Instead, the program starts closing the semaphore & shared memory.
-    signal(SIGINT, InterruptHandler);
+void printInput(inputStruct* input);
+void InterruptHandler(int sig);
+void safeExit (sem_t * semaphoreToTest);
+void endPage();
+void outputsForm();
+void startPage(char* title);
+void header(char* mimeType);
+void reading (char* memoryName, sem_t* writeSem, sem_t* readSem);
 
-    // Setting up the variables to make the semaphore
-    multithreading MTstruct;
-    MTstruct.sharedMem = (char *) MAP_FAILED;
-    MTstruct.itemsFilled = SEM_FAILED;
-    MTstruct.spaceLeft = SEM_FAILED;
-
-    char* memoryName = "/inputStorage";
-    char* itemsFilledSemName = "/itemsFilled";
-    char* spaceLeftSemName = "spaceLeft";
-
-    // Other variables that are used throughout the program.
-    int structSize = sizeof(x360inputs);
-    int arraySize = MEMORYSIZE * structSize;
-
-    MTstruct.sharedMem = my_shm_create(arraySize, memoryName);
-    my_sem_open(&MTstruct.itemsFilled, itemsFilledSemName);
-    my_sem_open(&MTstruct.spaceLeft, spaceLeftSemName);
-
-	// Starting to create the HTML:
-	header("text/html");
-	startPage("Controller Controller");
-
-	printf("<p>Fill this in to send output to the controller</p>\n");
-	
-	outputsForm();
-
-	printf("<p>If something went wrong with sending the output, It'll be shown below:</p>\n");
-
-	handleInput();
-
-	printf("<p>Here, the input of the controller is read and displayed below. You can stop getting data using CTRL+C</p>\n");
-	
-	if (MTstruct.itemsFilled == SEM_FAILED)
-	{
-		printf("itemsFilled semaphore failed to open. \n");
-		interruptDetected = true;
-	}
-	if (MTstruct.spaceLeft == SEM_FAILED)
-	{
-		printf("spaceLeft semaphore failed to open\n");
-		interruptDetected = true;
-	}
-
-	while(!interruptDetected) // read shared memory while there is no keyboard input
-	{// note: don't know if this works in a browser
-		reading(MTstruct);
-	}
-
-	// safeExit(); for when the semaphores work
-
-	printf("<p>You have clicked CTRL+C. The end of the page will now be made.</p>\n");
-
-	endPage();
-
-    shmCleanup(memoryName);
-    semCleanup(itemsFilledSemName);
-    semCleanup(spaceLeftSemName);
-
-    return 0;
-}
 
 void handleInput()
 {
@@ -154,18 +88,17 @@ void handleInput()
 	}
 }
 
-void reading (multithreading MTstruct)
+void reading (char* memoryName,
+	 			sem_t* writeSem, 
+	 			sem_t* readSem)
 {
     int rtnval;
     int positionToRead;
-    // x360inputs readNr;
-
-    // TODO: make use of this
-    // x360inputs* shm_inputs = (x360inputs*)MTstruct.sharedMem;
+    inputStruct readInput;
 
     while(!interruptDetected)
     {
-        rtnval = sem_wait(MTstruct.itemsFilled);
+        rtnval = sem_wait(writeSem);
         if(rtnval != 0)
         {
             perror("ERROR: sem_wait() failed");
@@ -173,7 +106,7 @@ void reading (multithreading MTstruct)
         }
 
         // Get the position where there is space to write.
-        rtnval = sem_getvalue(MTstruct.itemsFilled, &positionToRead);
+        rtnval = sem_getvalue(writeSem, &positionToRead);
         if(rtnval != 0)
         {
             perror("ERROR: sem_getvalue() failed");
@@ -181,36 +114,24 @@ void reading (multithreading MTstruct)
         }
 
         // TODO: actually use the read values
-        // x360inputs readInput = shm_inputs[positionToRead];
+        // inputStruct readInput = shm_inputs[positionToRead];
         
-        rtnval = sem_post(MTstruct.spaceLeft);
+        rtnval = sem_post(readSem);
         if(rtnval != 0)
         {
             perror("ERROR: sem_post() failed");
             break;
         }
+        // print inputstruct
+    	inputStruct* shm_inputs = (inputStruct*)memoryName;
 
-        // printf("input: %d - ", readNr.value);
+    	printInput(shm_inputs);
 
-        	// To DO: convert to print x360inputs
-/*        int i = 0;
-        for (; i < PRONUNCIATIONLENGTH; i++)
-        {
-            char gelezenKarakter = readNr.pronunciation[i];
-            if (gelezenKarakter == '\0')
-            {
-                break;
-            }
-            else
-            {
-                printf("%c", gelezenKarakter);
-            }
-        }*/
         printf("\n");
     }
 
-    // Check if the spaceLeft semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
-    safeExit(MTstruct.spaceLeft);
+    // Check if the readSem semaphore is 0 and if so post to it, to avoid the other thread getting a deadlock.
+    safeExit(readSem);
 }
 
 // HTML stuff
@@ -302,8 +223,75 @@ void safeExit (sem_t * semaphoreToTest)
 
 // Handling the interrupt
 
-void  InterruptHandler(int sig)
+void InterruptHandler(int sig)
 {
     signal(sig, SIG_IGN);
     interruptDetected = true;
+}
+
+void printInput(inputStruct* input)
+{
+	printf("This will be the input\n");
+}
+
+
+int main(void)
+{
+	// Set up the interrupt for pressing ctrl-C, so it doesn't kill the program.
+    // Instead, the program starts closing the semaphore & shared memory.
+    signal(SIGINT, InterruptHandler);
+
+    char* memoryName;		// No names needed, they are pre-defined in semshm.h
+    sem_t* writeSem;			
+    sem_t* readSem;
+
+    // Other variables that are used throughout the program.
+    int structSize = sizeof(inputStruct);
+    int arraySize = MEMORYSIZE * structSize;
+
+    memoryName = my_shm_create(arraySize, sharedMemName);
+    writeSem = my_sem_open(writeSemName);
+    readSem = my_sem_open(readSemName);
+
+	// Starting to create the HTML:
+	header("text/html");
+	startPage("Controller Controller");
+
+	printf("<p>Fill this in to send output to the controller</p>\n");
+	
+	outputsForm();
+
+	printf("<p>If something went wrong with sending the output, It'll be shown below:</p>\n");
+
+	handleInput();
+
+	printf("<p>Here, the input of the controller is read and displayed below. You can stop getting data using CTRL+C</p>\n");
+	
+	if (writeSem == SEM_FAILED)
+	{
+		printf("writeSem semaphore failed to open. \n");
+		interruptDetected = true;
+	}
+	if (readSem == SEM_FAILED)
+	{
+		printf("readSem semaphore failed to open\n");
+		interruptDetected = true;
+	}
+
+	while(!interruptDetected) // read shared memory while there is no keyboard input
+	{// note: don't know if this works in a browser
+		reading(memoryName, writeSem, readSem);
+	}
+
+	// safeExit(); for when the semaphores work
+
+	printf("<p>You have clicked CTRL+C. The end of the page will now be made.</p>\n");
+
+	endPage();
+
+    shmCleanup(memoryName);
+    semCleanup(writeSemName);
+    semCleanup(readSemName);
+
+    return 0;
 }

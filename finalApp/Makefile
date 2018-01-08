@@ -10,14 +10,23 @@ CGI_SOURCE = code/cgi.c
 # Not quite sure if that's how CGI is actually going to work
 
 CC=gcc
+ARM=arm-linux-gcc
 
 all: clean daemon cgi
+
+pi: clean pidaemon picgi
 
 daemon: $(DAEMON_SOURCE)
 	$(CC) $(DAEMON_SOURCE) $(LIBRARIES) $(CFLAGS) $(DAEMON_APP)
 
 cgi: $(CGI_SOURCE)
 	$(CC) $(CGI_SOURCE) $(CGI_LIBRARIES) $(CFLAGS) $(CGI_APP)
+
+pidaemon: $(DAEMON_SOURCE)
+	$(ARM) $(DAEMON_SOURCE) $(LIBRARIES) $(CFLAGS) $(DAEMON_APP)
+
+picgi: $(CGI_SOURCE)
+	$(ARM) $(CGI_SOURCE) $(CGI_LIBRARIES) $(CFLAGS) $(CGI_APP)
 
 clean:
 	@rm -rf $(DAEMON_APP)
