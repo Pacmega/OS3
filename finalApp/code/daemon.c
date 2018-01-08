@@ -14,7 +14,6 @@
 #include <signal.h>            // For the keyboard interrupt
 #include <libusb-1.0/libusb.h> // USB library
 
-// TODO: create a more useful structs file if it's even needed
 #include "../lib/structs.h"    // Data about the multithreading and number structs
 
 // TODO: go through this file and clean it up (and understand it)
@@ -133,7 +132,6 @@ void * settingChanger (void* arg)
 
 	while(1)
 	{
-		printf("%p\n", &receivedMessage);
 		rtnval = mq_receive(mtStruct->messageQueue, &receivedMessage, sizeof(receivedMessage), NULL);
 		if(rtnval == -1)
         {
@@ -172,9 +170,6 @@ void * settingChanger (void* arg)
         		// This is not a value the USB daemon should have to deal with.
         		break;
         }
-
-        // TODO: use received message to change setting on controller
-        printf("Mate what\n");
 	}
 	
 	return (NULL);
@@ -198,7 +193,6 @@ void * inputReporter (void* arg)
             break;
         }
 
-		// TODO: uncomment this
 		if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
 		{
 			fprintf(stderr, "Transfer failed: %d\n", rtnval);
@@ -254,15 +248,14 @@ int main(int argc, char const *argv[])
 	int structSize = sizeof(inputStruct);
 
 	libusb_init(NULL);
-	// TODO: uncomment this
-	// mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
 
-	// TODO: uncomment this
-	// if (mtStruct.deviceHandle == NULL)
-	// {
-	// 	fprintf(stderr, "Failed to open device\n");
-	// 	return (1);
-	// }
+	mtStruct.deviceHandle = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
+
+	if (mtStruct.deviceHandle == NULL)
+	{
+		fprintf(stderr, "Failed to open device\n");
+		return (1);
+	}
 
 	mtStruct.messageQueue = mq_open (messageQueueName, O_RDONLY);
 	if (mtStruct.messageQueue == -1)

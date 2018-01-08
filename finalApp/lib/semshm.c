@@ -37,7 +37,6 @@ char * my_shm_create (int size, char* shmName)
         perror ("ERROR: mmap() failed");
     }
 
-    printf("Shm create returning %p\n", shm_addr);
     return (shm_addr);
 }
 
@@ -71,8 +70,6 @@ char * my_shm_open (int size, char* shmName)
     {
         perror ("ERROR: mmap() failed");
     }
-
-    printf("Returned shm_addr = %p\n", shm_addr);
 
     return (shm_addr);
 }
