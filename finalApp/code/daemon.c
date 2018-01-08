@@ -71,7 +71,11 @@ static void createDaemon()
 	umask(0);
 
 	// Change the working directory of this process to the root directory
-	chdir("/");
+	if(chdir("/") != 0)
+	{
+		// Unable to change working directory.
+		exit(EXIT_FAILURE);
+	}
 
 	// Close all opened file desriptors (STDIN, STDOUT)
 	int x;
@@ -111,6 +115,8 @@ void printReport()
 
 int main(int argc, char const *argv[])
 {
+	createDaemon();
+
     libusb_device_handle *h;
 	
 	int error, transferred;
@@ -123,7 +129,7 @@ int main(int argc, char const *argv[])
 		return (1);
 	}
 
-	inputStruct structToSend;
+	// inputStruct structToSend;
 	
 	error = 0;
 

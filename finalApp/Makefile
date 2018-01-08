@@ -3,7 +3,7 @@ CGI_APP = cgiApp
 
 CFLAGS = -O2 -Wall -Werror -lrt -lm -pthread -o
 
-# UNUSED_LIBRARIES_COMMAND = $(wildcard lib/*.h)
+LIBUSB = -lusb-1.0
 CGI_LIBRARIES = lib/semshm.c
 DAEMON_SOURCE = code/daemon.c
 CGI_SOURCE = code/cgi.c
@@ -14,7 +14,7 @@ CC=gcc
 all: clean daemon cgi
 
 daemon: $(DAEMON_SOURCE)
-	$(CC) $(DAEMON_SOURCE) $(LIBRARIES) $(CFLAGS) $(DAEMON_APP)
+	$(CC) $(DAEMON_SOURCE) $(LIBRARIES) $(LIBUSB) $(CFLAGS) $(DAEMON_APP)
 
 cgi: $(CGI_SOURCE)
 	$(CC) $(CGI_SOURCE) $(CGI_LIBRARIES) $(CFLAGS) $(CGI_APP)
