@@ -14,7 +14,7 @@ int error, transferred;
 int main(int argc, char *argv[])
 {
 	libusb_device_handle *h;
-	unsigned char inputData[20];				  //	//
+	unsigned char inputData[20];
 
 	libusb_init(NULL);
 	h = libusb_open_device_with_vid_pid(NULL, 0x045e, 0x028e);
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 
 	while(true)
 	{
-		if ((error = libusb_interrupt_transfer(h, 0x81, inputData, sizeof(inputData), &transferred, 0)) = 0)
+		if ((error = libusb_interrupt_transfer(h, 0x81, inputData, sizeof(inputData), &transferred, 0)) == 0)
 		{
 			fprintf(stderr, "Failed to retrieve buttondata\n");
 		}

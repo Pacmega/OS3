@@ -6,7 +6,7 @@ USB_LIB=-lusb-1.0
 
 GCC=g++
 
-ARM=../../../../buildroot/output/host/usr/bin/arm-linux-gcc
+ARM=../../../buildroot/output/host/usr/bin/arm-linux-gcc
 
 USBtest: $(USB_SOURCES) Makefile
 	$(GCC) $(CFLAGS) $(USB_SOURCES) $(USB_LIB) -o $@
