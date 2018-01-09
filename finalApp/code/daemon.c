@@ -101,16 +101,16 @@ void printReport()
 	printf("Right trigger\t\t%d\n", inputReport[rightTrigger]);
 	
 	printf("Left stick values\n");
-	printf("%d\n", inputReport[6]);
-	printf("%d\n", inputReport[7]);
-	printf("%d\n", inputReport[8]);
-	printf("%d\n", inputReport[9]);
+	printf("%d\n", inputReport[leftStickPt1]);
+	printf("%d\n", inputReport[leftStickPt2]);
+	printf("%d\n", inputReport[leftStickPt3]);
+	printf("%d\n", inputReport[leftStickPt4]);
 	
 	printf("Right stick values\n");
-	printf("%d\n", inputReport[10]);
-	printf("%d\n", inputReport[11]);
-	printf("%d\n", inputReport[12]);
-	printf("%d\n", inputReport[13]);
+	printf("%d\n", inputReport[rightStickPt1]);
+	printf("%d\n", inputReport[rightStickPt2]);
+	printf("%d\n", inputReport[rightStickPt3]);
+	printf("%d\n", inputReport[rightStickPt4]);
 }
 
 int createStick(unsigned char leftMost, unsigned char secondLeft, unsigned char secondRight, unsigned char rightMost)
@@ -126,9 +126,13 @@ int createStick(unsigned char leftMost, unsigned char secondLeft, unsigned char 
 void * settingChanger (void* arg)
 {
 	multithreading * mtStruct = (multithreading*) arg;
-	int rtnval = 0;
+	int rtnval, transferred;
 	char receivedMessage;
 	sem_post(mtStruct->itemRequestedSem);
+	unsigned char smallRumbler = noPower;
+	unsigned char bigRumbler = noPower;
+	unsigned char lightMessage[3] = {1, 3, allLEDsOff};
+	unsigned char rumbleMessage[8] = {0x00, 0x08, 0x00, noPower, noPower, 0x00, 0x00, 0x00};
 
 	while(1)
 	{
@@ -146,25 +150,36 @@ void * settingChanger (void* arg)
         switch(receivedMessage)
         {
         	case 0:
-        		// Idk, what does this do?
+        		lightMessage[2] = allLEDsBlinking;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
         		break;
         	case 1:
-        		// Idk, what does this do?
+        		lightMessage[2] = LEDRotating;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
         		break;
         	case 2:
-        		// Idk, what does this do?
+        		lightMessage[2] = allLEDsOff;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
         		break;
         	case 3:
-        		// Idk, what does this do?
+        		smallRumbler = mediumPower;
+        		rumbleMessage[5] = smallRumbler;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
         		break;
         	case 4:
-        		// Idk, what does this do?
+        		smallRumbler = noPower;
+        		rumbleMessage[5] = smallRumbler;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
         		break;
         	case 5:
-        		// Idk, what does this do?
+        		bigRumbler = mediumPower;
+        		rumbleMessage[4] = bigRumbler;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
         		break;
         	case 6:
-        		// Idk, what does this do?
+        		bigRumbler = noPower;
+        		rumbleMessage[4] = bigRumbler;
+				rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
         		break;
         	default:
         		// This is not a value the USB daemon should have to deal with.

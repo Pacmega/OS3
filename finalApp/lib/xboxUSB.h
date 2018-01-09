@@ -59,6 +59,10 @@
 	#define leftTrigger           4		// Position in the input report
 	#define rightTrigger          5		// Position in the input report
 
+	#define noPower				  0
+	#define mediumPower			  122
+	#define fullPower			  255
+
 	// No other values need to be defined for the triggers,
 	// they have an entire byte dedicated to them.
 
