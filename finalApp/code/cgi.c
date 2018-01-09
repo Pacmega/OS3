@@ -249,7 +249,7 @@ int main(void)
     
     if (data == NULL)
         printf("No message found\n");
-    else if (sscanf(data, "choice=%ld", &choice) != 1)  // Check if there are 3 variables sent to the cgi
+    else if (sscanf(data, "choice=%ld", &choice) != 1)  // Check if there is a variable sent to the cgi
         printf("Invalid data. Data must be numeric.\n");
     else
     {
