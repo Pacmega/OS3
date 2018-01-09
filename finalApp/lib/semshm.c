@@ -52,7 +52,8 @@ char * my_shm_open (int size, char* shmName)
         // Unable to open. Try to create it instead!
         printf("Unable to open shared memory. Attempting to create it now.\n");
         shm_addr = my_shm_create(size, shmName);
-        if (shm_addr == MAP_FAILED)
+        shm_filedescriptor = shm_open (shmName, O_RDWR, 0600);
+        if (shm_filedescriptor == -1)
         {
             perror ("ERROR: unable to open or create shared memory");
             return shm_addr;
