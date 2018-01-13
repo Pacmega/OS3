@@ -129,13 +129,12 @@ void * settingChanger (void* arg)
     int rtnval, transferred;
     char receivedMessage;
     sem_post(mtStruct->itemRequestedSem);
-    unsigned char smallRumbler = noPower;
-    unsigned char bigRumbler = noPower;
     unsigned char lightMessage[3] = {1, 3, allLEDsOff};
     unsigned char rumbleMessage[8] = {0x00, 0x08, 0x00, noPower, noPower, 0x00, 0x00, 0x00};
 
     while(1)
     {
+        printf("Message queue loop\n");
         rtnval = mq_receive(mtStruct->messageQueue, &receivedMessage, sizeof(receivedMessage), NULL);
         if(rtnval == -1)
         {
@@ -149,36 +148,32 @@ void * settingChanger (void* arg)
 
         switch(receivedMessage)
         {
-            case 0:
+            case '0':
                 lightMessage[2] = allLEDsBlinking;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
                 break;
-            case 1:
+            case '1':
                 lightMessage[2] = LEDRotating;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
                 break;
-            case 2:
+            case '2':
                 lightMessage[2] = allLEDsOff;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, lightMessage, sizeof(lightMessage), &transferred, 0);
                 break;
-            case 3:
-                smallRumbler = mediumPower;
-                rumbleMessage[5] = smallRumbler;
+            case '3':
+                rumbleMessage[4] = mediumPower;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
                 break;
-            case 4:
-                smallRumbler = noPower;
-                rumbleMessage[5] = smallRumbler;
+            case '4':
+                rumbleMessage[4] = noPower;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
                 break;
-            case 5:
-                bigRumbler = mediumPower;
-                rumbleMessage[4] = bigRumbler;
+            case '5':
+                rumbleMessage[3] = mediumPower;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
                 break;
-            case 6:
-                bigRumbler = noPower;
-                rumbleMessage[4] = bigRumbler;
+            case '6':
+                rumbleMessage[3] = noPower;
                 rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x01, rumbleMessage, sizeof(rumbleMessage), &transferred, 0);
                 break;
             default:
@@ -201,12 +196,16 @@ void * inputReporter (void* arg)
 
     while(true)
     {
+        printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n[DBG] inputReporter loop\n");
+
         rtnval = sem_wait(mtStruct->itemRequestedSem);
         if(rtnval != 0)
         {
             perror("ERROR: sem_wait() failed");
             break;
         }
+
+        printf("[DBG] sem_wait inputReporter\n");
 
         if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
         {
@@ -224,15 +223,6 @@ void * inputReporter (void* arg)
             structToSend.rightStickInput = createStick(inputReport[rightStickPt1], inputReport[rightStickPt2], inputReport[rightStickPt3], inputReport[rightStickPt4]);
 
             *shm_inputStruct = structToSend;
-            // interpretButtons();
-            // rumbleSetting(smallRumbler, bigRumbler);
-            // lightSetting(lightMode);
-
-            // if ((rtnval = sendNewSettings(deviceHandle, lightMode, smallRumbler, bigRumbler)) != 0)
-            // {
-            //  fprintf(stderr, "Transfer failed: %d\n", rtnval);
-            //  return (1);
-            // }
         }
 
         rtnval = sem_post(mtStruct->itemAvailableSem);

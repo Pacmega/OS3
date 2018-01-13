@@ -25,68 +25,71 @@ void header(char* mimeType);
 void reading ();
 
 
-void handleInput(int choice)
+void handleInput(char choice)
 {
     char mq_name[nameSize] = messageQueueName;
     int rtnval = -1;
 
-    mqd_t mq_fd = -1; 
-
-    mq_fd = mq_open(mq_name, O_WRONLY); // Try to open an existing MQ (Write only mode)
+    mqd_t mq_fd = mq_open(mq_name, O_WRONLY); // Try to open an existing MQ (Write only mode)
 
     if (mq_fd != -1)    // if the queue opened
     {
         // Send the outputs to the queue
-        rtnval = mq_send(mq_fd, (char *) &choice, sizeof(int), 0);
-        if (rtnval == -1)
-            printf("Error sending message to queue.\n");
 
-        mq_unlink(mq_name);
+        rtnval = mq_send(mq_fd, &choice, sizeof(char), 0);
+        if (rtnval == -1)
+        {
+            perror("Error sending message to queue");
+        }
+        else
+        {
+        	printf("Message sent.\n");
+        }
+
+        // It is opened now, let's close it.
+        mq_close(mq_fd);
+    }
+    else
+    {
+    	printf("Critical error: unable to open message queue, can't send command to controller.\n");
     }
     // if the queue didn't open, it means the daemon isnt running correctly
 }
 
 void reading()
 {
-    char* memName = sharedMemName;
-    char* availableName = itemAvailableSemName;
-    char* requestName = itemRequestSemName;
-
-    char* memory;
-    sem_t* availableSem;            
-    sem_t* requestSem;
-
-    // Other variables that are used throughout the program.
     int structSize = sizeof(inputStruct);
 
-    memory = my_shm_create(structSize, memName);
-    requestSem = my_sem_open(requestName);
-    availableSem = my_sem_open(availableName);
-
+    sem_t* availableSem = my_sem_open(itemAvailableSemName);
+    sem_t* requestSem = my_sem_open(itemRequestSemName);
+    char* memory = my_shm_open(structSize, sharedMemName);
+    
     int rtnval;
-    int positionToRead;
-    //inputStruct readInput;
-
-    rtnval = sem_wait(availableSem);
-    if(rtnval != 0)
+    
+    if (availableSem == SEM_FAILED)
     {
-        perror("ERROR: sem_wait() failed");
+        printf("Critical error: unable to open \"items available\" semaphore.");
+
+        // Unable to properly execute without semaphore, return.
+        return;
+    }
+    if (requestSem == SEM_FAILED)
+    {
+        printf("Critical error: unable to open \"item requesting\" semaphore.");
+
+        // Unable to properly execute without semaphore, return.
         return;
     }
 
-    // Get a position to read to where there is space available
-    rtnval = sem_getvalue(availableSem, &positionToRead);
-    if(rtnval != 0)
+    if (memory == MAP_FAILED)
     {
-        perror("ERROR: sem_getvalue() failed");
+        printf("Critical error: unable to open or create shared memory.\n");
+
+        // Unable to properly execute without shared memory, return.
         return;
     }
 
-    // Get the address of the shared memory where the inputstruct resides
-    char* address = my_shm_open(sizeof(inputStruct), memName);
-
-    inputStruct* shm_inputs = (inputStruct*)address;
-
+    // Request an input report from the controller.
     rtnval = sem_post(requestSem);
     if(rtnval != 0)
     {
@@ -94,12 +97,29 @@ void reading()
         return;
     }
 
-    printInput(shm_inputs);
+    // Wait until the daemon reports that an item is available.
+    rtnval = sem_wait(availableSem);
+    if(rtnval != 0)
+    {
+        perror("ERROR: sem_wait() failed");
+        return;
+    }
+
+    // An input report is now available in the shared memory, so take it from there.
+    inputStruct* shm_inputs = (inputStruct*)memory;
+
+    if (shm_inputs == NULL)
+    {
+    	printf("Unable to get input report from shared memory.\n");
+    }
+    else
+    {
+    	printInput(shm_inputs);
+    }
 
     shmCleanup(memory);
-    semCleanup(requestName);
-    semCleanup(availableName);
-
+    semCleanup(itemRequestSemName);
+    semCleanup(itemAvailableSemName);
 }
 
 // HTML stuff
@@ -233,7 +253,7 @@ int main(void)
     startPage("Controller Controller\n");
 
     char* data;
-    long choice;
+    char choice;
 
     printf("<p>Choose a number:</p>\n");
     printf("<p>[0]      LEDs Blink </p>"
@@ -249,20 +269,22 @@ int main(void)
     
     if (data == NULL)
         printf("No message found\n");
-    else if (sscanf(data, "choice=%ld", &choice) != 1)  // Check if there is a variable sent to the cgi
+    else if (sscanf(data, "choice=%c", &choice) != 1)  // Check if there is a variable sent to the cgi
         printf("Invalid data. Data must be numeric.\n");
     else
     {
-        if (choice == 7)
+    	if (choice == '0' || choice == '1' || choice == '2' || choice == '3' || choice == '4' || choice == '5' || choice == '6')
+    	{
+    		handleInput(choice);
+    	}
+        if (choice == '7')
         {
             reading();
-            handleInput(choice);
         }
         else
         {
-            handleInput(choice);
+        	printf("Invalid data. Data must be numeric.\n");
         }
-
     }
 
     endPage();
