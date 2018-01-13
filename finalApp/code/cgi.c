@@ -89,6 +89,12 @@ void reading()
         return;
     }
 
+    sem_getvalue(requestSem, &rtnval);
+    printf("RequestSem state: %d\n", rtnval);
+
+    sem_getvalue(availableSem, &rtnval);
+    printf("AvailableSem state: %d\n", rtnval);
+
     // Request an input report from the controller.
     rtnval = sem_post(requestSem);
     if(rtnval != 0)
@@ -97,6 +103,12 @@ void reading()
         return;
     }
 
+    sem_getvalue(requestSem, &rtnval);
+    printf("RequestSem state: %d\n", rtnval);
+
+    sem_getvalue(availableSem, &rtnval);
+    printf("AvailableSem state: %d\n", rtnval);
+
     // Wait until the daemon reports that an item is available.
     rtnval = sem_wait(availableSem);
     if(rtnval != 0)
@@ -104,6 +116,9 @@ void reading()
         perror("ERROR: sem_wait() failed");
         return;
     }
+
+    sem_getvalue(availableSem, &rtnval);
+    printf("AvailableSem state: %d\n", rtnval);
 
     // An input report is now available in the shared memory, so take it from there.
     inputStruct* shm_inputs = (inputStruct*)memory;
@@ -146,103 +161,92 @@ void endPage()
 
 void printInput(inputStruct* input)
 {
-    printf("<p>Input: </p>\n");
+    printf("<p>Input: </p>");
+    printf("<ul>");
 
     if (input->leftTriggerInput > deadzone)
     {
-        printf("Left trigger pressed\n");
+        printf("<li>Left trigger pressed</li>");
     }
 
     if (input->rightTriggerInput > deadzone)
     {
-        printf("Right trigger pressed\n");
+        printf("<li>Right trigger pressed</li>");
     }
 
     if (input->group1Input> 0)
     {
         // At least one of the buttons in this group is pressed
 
-        if (input->group1Input >= rightStick)
+        if ((input->group1Input & rightStick) > 0)
         {
-            input->group1Input -= rightStick;
-            printf("Right stick pressed\n");
+            printf("<li>Right stick pressed</li>");
         }
-        if (input->group1Input >= leftStick)
+        if ((input->group1Input & leftStick) > 0)
         {
-            input->group1Input -= leftStick;
-            printf("Left stick pressed\n");
+            printf("<li>Left stick pressed</li>");
         }
-        if (input->group1Input >= backButton)
+        if ((input->group1Input & backButton) > 0)
         {
-            input->group1Input -= backButton;
-            printf("Back pressed\n");
+            printf("<li>Back pressed</li>");
         }
-        if (input->group1Input >= startButton)
+        if ((input->group1Input & startButton) > 0)
         {
-            input->group1Input -= startButton;
-            printf("Start pressed\n");
+            printf("<li>Start pressed</li>");
         }
-        if (input->group1Input >= dpadRight)
+        if ((input->group1Input & dpadRight) > 0)
         {
-            input->group1Input -= dpadRight;
-            printf("D-Pad right pressed\n");
+            printf("<li>D-Pad right pressed</li>");
         }
-        if (input->group1Input >= dpadLeft)
+        if ((input->group1Input & dpadLeft) > 0)
         {
-            input->group1Input -= dpadLeft;
-            printf("D-Pad left pressed\n");
+            printf("<li>D-Pad left pressed</li>");
         }
-        if (input->group1Input >= dpadDown)
+        if ((input->group1Input & dpadDown) > 0)
         {
-            input->group1Input -= dpadDown;
-            printf("D-Pad down pressed\n");
+            printf("<li>D-Pad down pressed</li>");
         }
-        if (input->group1Input >= dpadUp)
+        if ((input->group1Input & dpadUp) > 0)
         {
-            input->group1Input -= dpadUp;
-            printf("D-Pad up pressed\n");
+            printf("<li>D-Pad up pressed</li>");
         }
     }
 
     if (input->group2Input > 0)
     {
         // At least one of the buttons in this group is pressed
-        if (input->group2Input >= buttonY)
+        if ((input->group2Input & buttonY) > 0)
         {
-            input->group2Input -= buttonY;
-            printf("Y ");
+            printf("<li>Y pressed</li>");
         }
-        if (input->group2Input >= buttonX)
+        if ((input->group2Input & buttonX) > 0)
         {
-            input->group2Input -= buttonX;
-            printf("X ");
+            printf("<li>X pressed</li>");
         }
-        if (input->group2Input >= buttonB)
+        if ((input->group2Input & buttonB) > 0)
         {
-            input->group2Input -= buttonB;
-            printf("B ");
+            printf("<li>B pressed</li>");
         }
-        if (input->group2Input >= buttonA)
+        if ((input->group2Input & buttonA) > 0)
         {
-            input->group2Input -= buttonA;
-            printf("A ");
+            printf("<li>A pressed</li>");
         }
-        if (input->group2Input >= buttonXBOX)
+
+        if ((input->group2Input & buttonXBOX) > 0)
         {
-            input->group2Input -= buttonXBOX;
-            printf("XBOX button pressed\n");
+            printf("<li>XBOX button pressed</li>");
         }
-        if (input->group2Input >= rightShoulder)
+        if ((input->group2Input & rightShoulder) > 0)
         {
-            input->group2Input -= rightShoulder;
-            printf("Right shoulder pressed\n");
+            printf("<li>Right shoulder pressed</li>");
         }
-        if (input->group2Input >= leftShoulder)
+        if ((input->group2Input & leftShoulder) > 0)
         {
-            input->group2Input -= leftShoulder;
-            printf("Left shoulder pressed\n");
+            printf("<li>Left shoulder pressed</li>");
         }
     }
+
+    printf("</ul>");
 }
 
 int main(void)
@@ -257,27 +261,31 @@ int main(void)
 
     printf("<p>Choose a number:</p>\n");
     printf("<p>[0]      LEDs Blink </p>"
-        "<p>[1]     LEDs Spin</p>"
-        "<p>[2]     LEDs Off</p>"
-        "<p>[3]     Left Rumbler on</p>"
-        "<p>[4]     Right Rumbler on</p>"
-        "<p>[5]     Left Rumbler off</p>"
-        "<p>[6]     Right Rumbler off</p>"
-        "<p>[7]     Read Controller input</p>");
+           "<p>[1]     LEDs Spin</p>"
+           "<p>[2]     LEDs Off</p>"
+           "<p>[3]     Left Rumbler on</p>"
+           "<p>[4]     Left Rumbler off</p>"
+           "<p>[5]     Right Rumbler on</p>"
+           "<p>[6]     Right Rumbler off</p>"
+           "<p>[7]     Read Controller input</p>");
     
     data = getenv("QUERY_STRING");
     
     if (data == NULL)
+    {
         printf("No message found\n");
+    }
     else if (sscanf(data, "choice=%c", &choice) != 1)  // Check if there is a variable sent to the cgi
+    {
         printf("Invalid data. Data must be numeric.\n");
+    }
     else
     {
     	if (choice == '0' || choice == '1' || choice == '2' || choice == '3' || choice == '4' || choice == '5' || choice == '6')
     	{
     		handleInput(choice);
     	}
-        if (choice == '7')
+    	else if (choice == '7')
         {
             reading();
         }

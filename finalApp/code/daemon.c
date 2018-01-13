@@ -134,16 +134,11 @@ void * settingChanger (void* arg)
 
     while(1)
     {
-        printf("Message queue loop\n");
         rtnval = mq_receive(mtStruct->messageQueue, &receivedMessage, sizeof(receivedMessage), NULL);
         if(rtnval == -1)
         {
             perror("ERROR: mq_receive() failed");
             break;
-        }
-        else
-        {
-            printf("Size of received message: %d.\n", rtnval);
         }
 
         switch(receivedMessage)
@@ -196,16 +191,13 @@ void * inputReporter (void* arg)
 
     while(true)
     {
-        printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n[DBG] inputReporter loop\n");
-
+        printf("fuck\n");
         rtnval = sem_wait(mtStruct->itemRequestedSem);
         if(rtnval != 0)
         {
             perror("ERROR: sem_wait() failed");
             break;
         }
-
-        printf("[DBG] sem_wait inputReporter\n");
 
         if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
         {
@@ -236,7 +228,7 @@ void * inputReporter (void* arg)
     return (NULL);
 }
 
-int main(int argc, char const *argv[])
+int main()
 {
     // TODO: once everything works, create as daemon instead of normal process
     // TODO: to translate to daemon language, replace all prints by syslog(LOG_NOTICE, *message string*);

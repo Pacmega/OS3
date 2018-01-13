@@ -1,7 +1,7 @@
 DAEMON_APP = daemonApp
 CGI_APP = cgiApp
 
-CFLAGS = -O2 -Wall -lrt -lm -pthread -o
+CFLAGS = -O2 -Wall -Wextra -Werror -lrt -lm -pthread -o
 
 LIBUSB = -lusb-1.0
 LIBRARIES = lib/semshm.c
