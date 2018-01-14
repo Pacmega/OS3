@@ -1,7 +1,4 @@
-#include <stdio.h>             // Printing to the terminal
-#include <string.h>            // Strings
 #include <syslog.h>            // Logging information
-#include <stdlib.h>
 #include <sys/types.h>         // Shared memory
 #include <sys/mman.h>          // Shared memory
 #include <sys/stat.h>          // Shared memory
@@ -9,109 +6,77 @@
 #include <semaphore.h>         // For POSIX semaphores
 #include <pthread.h>           // For POSIX threads
 #include <mqueue.h>            // For POSIX message queues
-#include <stdbool.h>           // Booleans
-#include <unistd.h>            // Sleep() & fork()
-#include <signal.h>            // For the keyboard interrupt
+#include <unistd.h>            // fork()
 #include <libusb-1.0/libusb.h> // USB library
 
 #include "../lib/structs.h"    // Data about the multithreading and number structs
 
-// TODO: go through this file and clean it up (and understand it)
-#include "../lib/auxiliary.h"  // TODO: describe what this header is useful for
-
 #include "../lib/semshm.h"     // Semaphore & shared memory management functions
 #include "../lib/xboxUSB.h"    // Xbox 360 USB information and _BV() macro
-#include "../lib/defines.h"        // defined names for semaphores, shared memory & message queue
+#include "../lib/defines.h"    // defined names for semaphores, shared memory & message queue
 
 unsigned char inputReport[14] = {0};
 
-// TODO: uncomment this
-// static void createDaemon()
-// {
-//  pid_t pid;
-
-//  // Fork off the parent process
-//  pid = fork();
-
-//  if (pid < 0)
-//  {
-//      // An error occured.
-//      exit(EXIT_FAILURE);
-//  }
-
-//  if (pid > 0)
-//  {
-//      // Process was successfully forked: parent can terminate.
-//      exit(EXIT_SUCCESS);
-//  }
-
-//  if (setsid() < 0)
-//  {
-//      // An error occured.
-//      exit(EXIT_FAILURE);
-//  }
-
-//  // TODO: source lists two empty SIG handlers here. Needed or not?
-//  // (https://stackoverflow.com/questions/17954432/creating-a-daemon-in-linux)
-
-//  // Fork off for the second time.
-//  if (pid < 0)
-//  {
-//      exit(EXIT_FAILURE);
-//  }
-
-//  if (pid > 0)
-//  {
-//      // Second fork succeeded: let this parent terminate as well.
-//      exit(EXIT_SUCCESS);
-//  }
-
-//  // File permissions for this process: none.
-//  umask(0);
-
-//  // Change the working directory of this process to the root directory
-//  if(chdir("/") != 0)
-//  {
-//      // Unable to change working directory.
-//      exit(EXIT_FAILURE);
-//  }
-
-//  // Close all opened file desriptors (STDIN, STDOUT)
-//  int x;
-//  for (x = sysconf(_SC_OPEN_MAX); x >= 0; x--)
-//  {
-//      close(x);
-//  }
-
-//  // Open a log file to send log messages to.
-//  openlog("USBdaemon", LOG_PID, LOG_DAEMON);
-// }
-
-// TODO: delete this
-void printReport()
+static void createDaemon()
 {
-    printf("Input report\n");
-    printf("Message type\t\t%d\n", inputReport[messageType]);
-    printf("Packet size (B)\t\t%d\n", inputReport[packetSize]);
-    printf("D-Pad + button group 1\t%d\n", inputReport[inputGroup1]);
-    printf("(Start/Back & stick press)\n");
-    printf("Button group 2\t\t%d\n", inputReport[inputGroup2]);
-    printf("(Shoulders, A/B/X/Y, Xbox logo)\n");
-    printf("Left trigger\t\t%d\n", inputReport[leftTrigger]);
-    printf("Right trigger\t\t%d\n", inputReport[rightTrigger]);
-    
-    printf("Left stick values\n");
-    printf("%d\n", inputReport[leftStickPt1]);
-    printf("%d\n", inputReport[leftStickPt2]);
-    printf("%d\n", inputReport[leftStickPt3]);
-    printf("%d\n", inputReport[leftStickPt4]);
-    
-    printf("Right stick values\n");
-    printf("%d\n", inputReport[rightStickPt1]);
-    printf("%d\n", inputReport[rightStickPt2]);
-    printf("%d\n", inputReport[rightStickPt3]);
-    printf("%d\n", inputReport[rightStickPt4]);
+    // Source: https://stackoverflow.com/questions/17954432/creating-a-daemon-in-linux
+
+    pid_t pid;
+
+    // Fork off the parent process
+    pid = fork();
+
+    if (pid < 0)
+    {
+        // An error occured.
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0)
+    {
+        // Process was successfully forked: parent can terminate.
+        exit(EXIT_SUCCESS);
+    }
+
+    if (setsid() < 0)
+    {
+        // An error occured.
+        exit(EXIT_FAILURE);
+    }
+
+    // Fork off for the second time.
+    if (pid < 0)
+    {
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0)
+    {
+        // Second fork succeeded: let this parent terminate as well.
+        exit(EXIT_SUCCESS);
+    }
+
+    // File creation permission mask for this process: no permissions.
+    umask(0);
+
+    // Change the working directory of this process to the root directory
+    if(chdir("/") != 0)
+    {
+        // Unable to change working directory.
+        exit(EXIT_FAILURE);
+    }
+
+    // Close all opened file desriptors (STDIN, STDOUT)
+    int x;
+    for (x = sysconf(_SC_OPEN_MAX); x >= 0; x--)
+    {
+        close(x);
+    }
+
+    // Open a log file to send log messages to.
+    openlog("USBdaemon", LOG_PID, LOG_DAEMON);
 }
+
 
 int createStick(unsigned char leftMost, unsigned char secondLeft, unsigned char secondRight, unsigned char rightMost)
 {
@@ -136,7 +101,7 @@ void * settingChanger (void* arg)
         rtnval = mq_receive(mtStruct->messageQueue, &receivedMessage, sizeof(receivedMessage), NULL);
         if(rtnval == -1)
         {
-            perror("ERROR: mq_receive() failed");
+            syslog(LOG_ERR, "mq_receive() failed");
             break;
         }
 
@@ -188,23 +153,22 @@ void * inputReporter (void* arg)
 
     inputStruct* shm_inputStruct = (inputStruct*) mtStruct->sharedMemory;
 
-    while(true)
+    while(1)
     {
         rtnval = sem_wait(mtStruct->itemRequestedSem);
         if(rtnval != 0)
         {
-            perror("ERROR: sem_wait() failed");
+            syslog(LOG_ERR, "sem_wait() failed");
             break;
         }
 
         if ((rtnval = libusb_interrupt_transfer(mtStruct->deviceHandle, 0x81, inputReport, sizeof(inputReport), &transferred, 0)) != 0)
         {
-            fprintf(stderr, "Transfer failed: %d\n", rtnval);
+            syslog(LOG_ERR, "LibUSB transfer failed");
             break;
         }
         else
         {
-            printReport();
             structToSend.group1Input = inputReport[inputGroup1];
             structToSend.group2Input = inputReport[inputGroup2];
             structToSend.leftTriggerInput = inputReport[leftTrigger];
@@ -218,7 +182,7 @@ void * inputReporter (void* arg)
         rtnval = sem_post(mtStruct->itemAvailableSem);
         if(rtnval != 0)
         {
-            perror("ERROR: sem_post() failed");
+            syslog(LOG_ERR, "sem_post() failed");
             break;
         }
     }
@@ -228,9 +192,7 @@ void * inputReporter (void* arg)
 
 int main()
 {
-    // TODO: once everything works, create as daemon instead of normal process
-    // TODO: to translate to daemon language, replace all prints by syslog(LOG_NOTICE, *message string*);
-    // createDaemon();
+    createDaemon();
 
     int structSize = sizeof(inputStruct);
 
@@ -247,7 +209,7 @@ int main()
 
     if (mtStruct.deviceHandle == NULL)
     {
-        fprintf(stderr, "Failed to open device\n");
+        syslog(LOG_ERR, "Failed to open device");
         return (1);
     }
 
@@ -263,21 +225,21 @@ int main()
         if (mtStruct.messageQueue == -1)
         {
             // Messagequeue is unusable.
-            printf("Unable to open message queue.");
+            syslog(LOG_ERR, "Unable to open message queue");
             exit(EXIT_FAILURE);
         }
     }
 
     if (mtStruct.itemAvailableSem == SEM_FAILED)
     {
-        printf("Critical error: unable to open itemsFilled semaphore.");
+        syslog(LOG_ERR, "Unable to open itemsFilled semaphore");
 
         // Unable to properly execute without semaphore, shut down.
         exit(EXIT_FAILURE);
     }
     if (mtStruct.itemRequestedSem == SEM_FAILED)
     {
-        printf("Critical error: unable to open spaceLeft semaphore.");
+        syslog(LOG_ERR, "Unable to open itemRequested semaphore");
 
         // Unable to properly execute without semaphore, shut down.
         exit(EXIT_FAILURE);
@@ -285,7 +247,7 @@ int main()
 
     if (mtStruct.sharedMemory == MAP_FAILED)
     {
-        printf("Critical error: unable to open or create shared memory.\n");
+        syslog(LOG_ERR, "Unable to open or create shared memory");
 
         // Unable to properly execute without shared memory, shut down.
         exit(EXIT_FAILURE);
@@ -293,17 +255,19 @@ int main()
 
     if (pthread_create (&changeSettingsThread, NULL, settingChanger, &mtStruct) != 0)
     {
-        perror ("controller setting changing thread");
+        syslog(LOG_ERR, "Unable to start controller setting changing thread");
+        exit(EXIT_FAILURE);
     }
     if (pthread_create (&sendStatusThread, NULL, inputReporter, &mtStruct) != 0)
     {
-        perror ("status submitting thread");
+        syslog(LOG_ERR, "Unable to start status sending thread");
+        exit(EXIT_FAILURE);
     }
 
     pthread_join(changeSettingsThread, NULL);
     pthread_join(sendStatusThread, NULL);
 
-    printf("Shutting down daemon.\n");
+    syslog(LOG_NOTICE, "Shutting down daemon");
 
     shmCleanup(sharedMemName);
     semCleanup(itemAvailableSemName);

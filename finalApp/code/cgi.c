@@ -86,12 +86,6 @@ void reading()
         return;
     }
 
-    sem_getvalue(requestSem, &rtnval);
-    printf("RequestSem state: %d\n", rtnval);
-
-    sem_getvalue(availableSem, &rtnval);
-    printf("AvailableSem state: %d\n", rtnval);
-
     // Request an input report from the controller.
     rtnval = sem_post(requestSem);
     if(rtnval != 0)
@@ -100,12 +94,6 @@ void reading()
         return;
     }
 
-    sem_getvalue(requestSem, &rtnval);
-    printf("RequestSem state: %d\n", rtnval);
-
-    sem_getvalue(availableSem, &rtnval);
-    printf("AvailableSem state: %d\n", rtnval);
-
     // Wait until the daemon reports that an item is available.
     rtnval = sem_wait(availableSem);
     if(rtnval != 0)
@@ -113,9 +101,6 @@ void reading()
         perror("ERROR: sem_wait() failed");
         return;
     }
-
-    sem_getvalue(availableSem, &rtnval);
-    printf("AvailableSem state: %d\n", rtnval);
 
     // An input report is now available in the shared memory, so take it from there.
     inputStruct* shm_inputs = (inputStruct*)memory;

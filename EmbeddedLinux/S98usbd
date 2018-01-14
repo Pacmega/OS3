@@ -1,0 +1,14 @@
+#!/bin/sh
+case "$1" in
+  'start')
+    echo "Starting USB Daemon..."
+    /doc/daemonApp
+  ;;
+  'stop')
+    echo "Stopping USB Daemon..."
+    kill `pidof daemonApp`
+  ;;
+esac
+
+exit 0
+
