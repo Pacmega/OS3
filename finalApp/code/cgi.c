@@ -61,22 +61,20 @@ void reading()
     int structSize = sizeof(inputStruct);
 
     sem_t* availableSem = my_sem_open(itemAvailableSemName);
-    sem_t* requestSem = my_sem_open(itemRequestSemName);
-    char* memory = my_shm_open(structSize, sharedMemName);
+    sem_t* requestSem 	= my_sem_open(itemRequestSemName);
+    char* memory 		= my_shm_open(structSize, sharedMemName);
     
     int rtnval;
     
     if (availableSem == SEM_FAILED)
     {
         printf("Critical error: unable to open \"items available\" semaphore.");
-
         // Unable to properly execute without semaphore, return.
         return;
     }
     if (requestSem == SEM_FAILED)
     {
         printf("Critical error: unable to open \"item requesting\" semaphore.");
-
         // Unable to properly execute without semaphore, return.
         return;
     }
@@ -84,7 +82,6 @@ void reading()
     if (memory == MAP_FAILED)
     {
         printf("Critical error: unable to open or create shared memory.\n");
-
         // Unable to properly execute without shared memory, return.
         return;
     }
@@ -133,8 +130,8 @@ void reading()
     }
 
     shmCleanup(memory);
-    semCleanup(itemRequestSemName);
-    semCleanup(itemAvailableSemName);
+    sem_close(availableSem);
+    sem_close(requestSem);
 }
 
 // HTML stuff
@@ -178,35 +175,35 @@ void printInput(inputStruct* input)
     {
         // At least one of the buttons in this group is pressed
 
-        if ((input->group1Input & rightStick) > 0)
+        if ((input->group1Input & _BV(rightStick)) == rightStickPressed)
         {
             printf("<li>Right stick pressed</li>");
         }
-        if ((input->group1Input & leftStick) > 0)
+        if ((input->group1Input & _BV(leftStick)) == leftStickPressed)
         {
             printf("<li>Left stick pressed</li>");
         }
-        if ((input->group1Input & backButton) > 0)
+        if ((input->group1Input & _BV(backButton)) == backButtonPressed)
         {
             printf("<li>Back pressed</li>");
         }
-        if ((input->group1Input & startButton) > 0)
+        if ((input->group1Input & _BV(startButton)) == startButtonPressed)
         {
             printf("<li>Start pressed</li>");
         }
-        if ((input->group1Input & dpadRight) > 0)
+        if ((input->group1Input & _BV(dpadRight)) == dpadRightPressed)
         {
             printf("<li>D-Pad right pressed</li>");
         }
-        if ((input->group1Input & dpadLeft) > 0)
+        if ((input->group1Input & _BV(dpadLeft)) == dpadLeftPressed)
         {
             printf("<li>D-Pad left pressed</li>");
         }
-        if ((input->group1Input & dpadDown) > 0)
+        if ((input->group1Input & _BV(dpadDown)) == dpadDownPressed)
         {
             printf("<li>D-Pad down pressed</li>");
         }
-        if ((input->group1Input & dpadUp) > 0)
+        if ((input->group1Input & _BV(dpadUp)) == dpadUpPressed)
         {
             printf("<li>D-Pad up pressed</li>");
         }
@@ -215,32 +212,32 @@ void printInput(inputStruct* input)
     if (input->group2Input > 0)
     {
         // At least one of the buttons in this group is pressed
-        if ((input->group2Input & buttonY) > 0)
+        if ((input->group2Input & _BV(buttonY)) == buttonYPressed)
         {
             printf("<li>Y pressed</li>");
         }
-        if ((input->group2Input & buttonX) > 0)
+        if ((input->group2Input & _BV(buttonX)) == buttonXPressed)
         {
             printf("<li>X pressed</li>");
         }
-        if ((input->group2Input & buttonB) > 0)
+        if ((input->group2Input & _BV(buttonB)) == buttonBPressed)
         {
             printf("<li>B pressed</li>");
         }
-        if ((input->group2Input & buttonA) > 0)
+        if ((input->group2Input & _BV(buttonA)) == buttonAPressed)
         {
             printf("<li>A pressed</li>");
         }
 
-        if ((input->group2Input & buttonXBOX) > 0)
+        if ((input->group2Input & _BV(buttonXBOX)) == buttonXBOXPressed)
         {
             printf("<li>XBOX button pressed</li>");
         }
-        if ((input->group2Input & rightShoulder) > 0)
+        if ((input->group2Input & _BV(rightShoulder)) == rightShoulderPressed)
         {
             printf("<li>Right shoulder pressed</li>");
         }
-        if ((input->group2Input & leftShoulder) > 0)
+        if ((input->group2Input & _BV(leftShoulder)) == leftShoulderPressed)
         {
             printf("<li>Left shoulder pressed</li>");
         }

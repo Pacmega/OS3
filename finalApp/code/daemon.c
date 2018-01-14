@@ -128,7 +128,6 @@ void * settingChanger (void* arg)
     multithreading * mtStruct = (multithreading*) arg;
     int rtnval, transferred;
     char receivedMessage;
-    sem_post(mtStruct->itemRequestedSem);
     unsigned char lightMessage[3] = {1, 3, allLEDsOff};
     unsigned char rumbleMessage[8] = {0x00, 0x08, 0x00, noPower, noPower, 0x00, 0x00, 0x00};
 
@@ -191,7 +190,6 @@ void * inputReporter (void* arg)
 
     while(true)
     {
-        printf("fuck\n");
         rtnval = sem_wait(mtStruct->itemRequestedSem);
         if(rtnval != 0)
         {

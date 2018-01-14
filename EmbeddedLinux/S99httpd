@@ -2,7 +2,7 @@
 case "$1" in
   'start')
     echo "Starting HTTP Daemon..."
-    httpd -h /var/www_backup/
+    httpd -h /var/www/
   ;;
   'stop')
     echo "Stopping HTTP Daemon..."
