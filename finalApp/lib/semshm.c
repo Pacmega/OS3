@@ -79,7 +79,7 @@ sem_t * my_sem_open (char* semaphoreName)
 {
     sem_t * semaphore;
 
-    semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 1);
+    semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 0);
 
     if (semaphore == SEM_FAILED)
     {
