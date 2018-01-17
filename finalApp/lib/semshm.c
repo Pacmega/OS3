@@ -42,7 +42,6 @@ char * my_shm_create (int size, char* shmName)
 
 char * my_shm_open (int size, char* shmName)
 {
-    //int     size;
     char *  shm_addr;
     int     shm_filedescriptor = -1;
     
@@ -78,7 +77,7 @@ sem_t * my_sem_open (char* semaphoreName)
 {
     sem_t * semaphore;
 
-    semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 1);
+    semaphore = sem_open(semaphoreName, O_CREAT | O_EXCL, 0600, 0);
 
     if (semaphore == SEM_FAILED)
     {

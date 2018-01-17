@@ -9,7 +9,6 @@
 #include <string.h>
 #include <mqueue.h>
 #include <unistd.h>
-#include <signal.h>     // For the keyboard interrupt
 #include <stdbool.h>    // Booleans
 #include <stdlib.h>
 
@@ -19,6 +18,7 @@
 #include "../lib/xboxUSB.h"
 
 void printInput(inputStruct* input);
+void readStick(int stickValue);
 void endPage();
 void startPage(char* title);
 void header(char* mimeType);
@@ -29,7 +29,7 @@ void handleInput(int choice)
 {
     char mq_name[nameSize] = messageQueueName;
     int rtnval = -1;
-
+    // make a new message queue descriptor
     mqd_t mq_fd = -1; 
 
     mq_fd = mq_open(mq_name, O_WRONLY); // Try to open an existing MQ (Write only mode)
@@ -37,73 +37,65 @@ void handleInput(int choice)
     if (mq_fd != -1)    // if the queue opened
     {
         // Send the outputs to the queue
-        rtnval = mq_send(mq_fd, (char *) &choice, sizeof(int), 0);
+        rtnval = mq_send(mq_fd, (char *) &choice, sizeof(char), 0);
         if (rtnval == -1)
-            printf("Error sending message to queue.\n");
+            perror("<p>Error sending message to queue.</p>");
 
-        mq_unlink(mq_name);
+        mq_close(mq_fd);
     }
-    // if the queue didn't open, it means the daemon isnt running correctly
+    else
+        perror("<p>Queue didn't open. There could be something wrong with the daemon</p>");
 }
 
 void reading()
 {
-    char* memName = sharedMemName;
-    char* availableName = itemAvailableSemName;
-    char* requestName = itemRequestSemName;
-
-    char* memory;
-    sem_t* availableSem;            
-    sem_t* requestSem;
-
-    // Other variables that are used throughout the program.
     int structSize = sizeof(inputStruct);
+    // Open shared memory and semaphores to communicate with the daemon
+    char* memory = my_shm_open(structSize, sharedMemName);
+    sem_t* availableSem = my_sem_open(itemAvailableSemName);            
+    sem_t* requestSem = my_sem_open(itemRequestSemName);
 
-    memory = my_shm_create(structSize, memName);
-    requestSem = my_sem_open(requestName);
-    availableSem = my_sem_open(availableName);
+    // check if the semaphores and shared memory is opened correctly:
+    if (availableSem == SEM_FAILED || requestSem == SEM_FAILED || memory == MAP_FAILED)
+    {
+        printf("<p>There were problems opening the semaphores or shared memory.</p>");
+        return;
+    }
+    
+    // request a report from the daemon
+    int rtnval = sem_post(requestSem);
+    if (rtnval != 0)
+    {
+        perror("sem_post failed");
+        return;
+    }
 
-    int rtnval;
-    int positionToRead;
-    //inputStruct readInput;
-
+    // wait till the daemon is done writing the report to the memory
     rtnval = sem_wait(availableSem);
     if(rtnval != 0)
     {
-        perror("ERROR: sem_wait() failed");
+        perror("ERROR: sem_wait() failed. Reading stopped.");
         return;
     }
 
-    // Get a position to read to where there is space available
-    rtnval = sem_getvalue(availableSem, &positionToRead);
-    if(rtnval != 0)
+    inputStruct* shm_inputs = (inputStruct*)memory;
+
+    
+    if(shm_inputs == NULL)
+        perror("Something went wrong when reading the report from the memory");
+    else
     {
-        perror("ERROR: sem_getvalue() failed");
-        return;
+        printInput(shm_inputs);
+        // Close the memory and semaphores when done.
+        shmCleanup(memory);
+        sem_close(requestSem);
+        sem_close(availableSem);
     }
-
-    // Get the address of the shared memory where the inputstruct resides
-    char* address = my_shm_open(sizeof(inputStruct), memName);
-
-    inputStruct* shm_inputs = (inputStruct*)address;
-
-    rtnval = sem_post(requestSem);
-    if(rtnval != 0)
-    {
-        perror("ERROR: sem_post() failed");
-        return;
-    }
-
-    printInput(shm_inputs);
-
-    shmCleanup(memory);
-    semCleanup(requestName);
-    semCleanup(availableName);
-
 }
 
 // HTML stuff
-
+// mimeType is a standardized way to indicate the nature and format of a doc 
+// for more info: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 void header(char* mimeType)
 {
     printf("Content-type:%s\n\n", mimeType);
@@ -124,110 +116,111 @@ void endPage()
     printf("</html>");
 }
 
+void readStick(int stickValue)
+{
+    unsigned char leftMost = (stickValue >> (3 * sizeof(unsigned char)));
+    unsigned char secondLeft = (stickValue >> (2 * sizeof(unsigned char)) & sizeof(unsigned char));
+    unsigned char rightMost = (stickValue >> (1 * sizeof(unsigned char)) & sizeof(unsigned char));
+    unsigned char secondRight = (stickValue & sizeof(unsigned char));
+    printf("<p>LeftMost: %c</p>", leftMost);
+    printf("<p>secondLeft: %c</p>", secondLeft);
+    printf("<p>rightMost: %c</p>", rightMost);
+    printf("<p>secondRight: %c</p>", secondRight);
+}
+
 void printInput(inputStruct* input)
 {
-    printf("<p>Input: </p>\n");
-
+    printf("<h1>Input: </h1>");
+/* Uncomment when problem found
+    printf("<p>left stick:</p>");
+    readStick(input->leftStickInput);
+    printf("<p>right stick:</p>");
+    readStick(input->rightStickInput); 
+*/
     if (input->leftTriggerInput > deadzone)
     {
-        printf("Left trigger pressed\n");
+        printf("<p>Left trigger pressed</p>");
     }
 
     if (input->rightTriggerInput > deadzone)
     {
-        printf("Right trigger pressed\n");
+        printf("<p>Right trigger pressed</p>");
     }
 
     if (input->group1Input> 0)
     {
         // At least one of the buttons in this group is pressed
 
-        if (input->group1Input >= rightStick)
+        if ((input->group1Input & _BV(rightStick)) == rightStickPressed)
         {
-            input->group1Input -= rightStick;
-            printf("Right stick pressed\n");
+            printf("<p>Right stick pressed</p>");
         }
-        if (input->group1Input >= leftStick)
+        if ((input->group1Input & _BV(leftStick)) == leftStickPressed)
         {
-            input->group1Input -= leftStick;
-            printf("Left stick pressed\n");
+            printf("<p>Left stick pressed</p>");
         }
-        if (input->group1Input >= backButton)
+        if ((input->group1Input & _BV(backButton)) == backButtonPressed)
         {
-            input->group1Input -= backButton;
-            printf("Back pressed\n");
+            printf("<p>Back pressed</p>");
         }
-        if (input->group1Input >= startButton)
+        if ((input->group1Input & _BV(startButton)) == startButtonPressed)
         {
-            input->group1Input -= startButton;
-            printf("Start pressed\n");
+            printf("<p>Start pressed</p>");
         }
-        if (input->group1Input >= dpadRight)
+        if ((input->group1Input & _BV(dpadRight)) == dpadRightPressed)
         {
-            input->group1Input -= dpadRight;
-            printf("D-Pad right pressed\n");
+            printf("<p>D-Pad right pressed</p>");
         }
-        if (input->group1Input >= dpadLeft)
+        if ((input->group1Input & _BV(dpadLeft)) == dpadLeftPressed)
         {
-            input->group1Input -= dpadLeft;
-            printf("D-Pad left pressed\n");
+            printf("<p>D-Pad left pressed</p>");
         }
-        if (input->group1Input >= dpadDown)
+        if ((input->group1Input & _BV(dpadDown)) == dpadDownPressed)
         {
-            input->group1Input -= dpadDown;
-            printf("D-Pad down pressed\n");
+            printf("<p>D-Pad down pressed</p>");
         }
-        if (input->group1Input >= dpadUp)
+        if ((input->group1Input & _BV(dpadUp)) == dpadUpPressed)
         {
-            input->group1Input -= dpadUp;
-            printf("D-Pad up pressed\n");
+            printf("<p>D-Pad up pressed</p>");
         }
     }
 
     if (input->group2Input > 0)
     {
         // At least one of the buttons in this group is pressed
-        if (input->group2Input >= buttonY)
+        if ((input->group2Input & _BV(buttonY)) == buttonYPressed)
         {
-            input->group2Input -= buttonY;
-            printf("Y ");
+            printf("<p>Y pressed</p>");
         }
-        if (input->group2Input >= buttonX)
+        if ((input->group2Input & _BV(buttonX)) == buttonXPressed)
         {
-            input->group2Input -= buttonX;
-            printf("X ");
+            printf("<p>X pressed</p>");
         }
-        if (input->group2Input >= buttonB)
+        if ((input->group2Input & _BV(buttonB)) == buttonBPressed)
         {
-            input->group2Input -= buttonB;
-            printf("B ");
+            printf("<p>B pressed</p>");
         }
-        if (input->group2Input >= buttonA)
+        if ((input->group2Input & _BV(buttonA)) == buttonAPressed)
         {
-            input->group2Input -= buttonA;
-            printf("A ");
+            printf("<p>A pressed</p>");
         }
-        if (input->group2Input >= buttonXBOX)
+        if ((input->group2Input & _BV(buttonXBOX)) == buttonXBOXPressed)
         {
-            input->group2Input -= buttonXBOX;
-            printf("XBOX button pressed\n");
+            printf("<p>XBOX button pressed</p>");
         }
-        if (input->group2Input >= rightShoulder)
+        if ((input->group2Input & _BV(rightShoulder)) == rightShoulderPressed)
         {
-            input->group2Input -= rightShoulder;
-            printf("Right shoulder pressed\n");
+            printf("<p>Right shoulder pressed</p>");
         }
-        if (input->group2Input >= leftShoulder)
+        if ((input->group2Input & _BV(leftShoulder)) == leftShoulderPressed)
         {
-            input->group2Input -= leftShoulder;
-            printf("Left shoulder pressed\n");
+            printf("<p>Left shoulder pressed</p>");
         }
     }
 }
 
 int main(void)
 {
-
     // Starting to create the HTML:
     header("text/html\n");
     startPage("Controller Controller\n");
@@ -235,30 +228,31 @@ int main(void)
     char* data;
     long choice;
 
-    printf("<p>Choose a number:</p>\n");
+    printf("<h1>Choose a number:</h1>\n");
     printf("<p>[0]      LEDs Blink </p>"
         "<p>[1]     LEDs Spin</p>"
         "<p>[2]     LEDs Off</p>"
         "<p>[3]     Left Rumbler on</p>"
-        "<p>[4]     Right Rumbler on</p>"
-        "<p>[5]     Left Rumbler off</p>"
+        "<p>[4]     Left Rumbler off</p>"
+        "<p>[5]     Right Rumbler on</p>"
         "<p>[6]     Right Rumbler off</p>"
         "<p>[7]     Read Controller input</p>");
     
+    // Search the environment list for QUERY_STRING
     data = getenv("QUERY_STRING");
     
     if (data == NULL)
-        printf("No message found\n");
-    else if (sscanf(data, "choice=%ld", &choice) != 1)  // Check if there are 3 variables sent to the cgi
-        printf("Invalid data. Data must be numeric.\n");
+        printf("<p>No message found</p>\n");
+    else if (sscanf(data, "choice=%ld", &choice) != 1)  // Check if there is a variable sent to the cgi
+        printf("<p>Invalid data. Data must be numeric.</p>");
     else
     {
         if (choice == 7)
         {
             reading();
-            handleInput(choice);
+            //handleInput(choice);
         }
-        else
+        else if (choice >= 0 && choice <= 6)
         {
             handleInput(choice);
         }
@@ -268,4 +262,4 @@ int main(void)
     endPage();
 
     return 0;
-}   
+}
